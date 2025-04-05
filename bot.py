@@ -36,8 +36,7 @@ def run_telegram_bot():
         await app.start()
         await app.bot.set_my_commands([("start", "Запустить бота")])
         logger.info("✅ Telegram-бот запущен!")
-        await app.updater.start_polling()
-        await app.updater.idle()
+        await app.idle()
 
     loop.run_until_complete(run())
 
