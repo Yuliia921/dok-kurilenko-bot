@@ -1,17 +1,17 @@
 
-import asyncio
 import logging
+import threading
+from flask import Flask
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
-from flask import Flask
-from werkzeug.serving import run_simple
+import asyncio
 
-# Логи
+# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.info("🔧 Старт скрипта bot.py")
+logger.info("🔧 Старт bot.py")
 
-# Telegram хэндлеры
+# Хэндлеры Telegram
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_keyboard = [['Осмотр', 'УЗИ', 'Консультация']]
     await update.message.reply_text(
@@ -22,36 +22,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Протокол принят. Спасибо 🌸")
 
-# Telegram-бот запуск
-async def telegram_task():
+# Telegram-бот (в отдельном потоке с event loop)
+def run_telegram_bot():
     logger.info("🚀 Telegram-бот запускается...")
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     app = ApplicationBuilder().token("7591394007:AAHBZWhMJgpmnKY85suJaJ5AW_RpwPTZ9VI").build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    await app.initialize()
-    await app.start()
-    await app.bot.set_my_commands([("start", "Запустить бота")])
-    logger.info("✅ Telegram-бот запущен!")
-    await app.updater.start_polling()
-    await app.updater.idle()
+
+    async def run():
+        await app.initialize()
+        await app.start()
+        await app.bot.set_my_commands([("start", "Запустить бота")])
+        logger.info("✅ Telegram-бот запущен!")
+        await app.updater.start_polling()
+        await app.updater.idle()
+
+    loop.run_until_complete(run())
 
 # Flask-заглушка
-def flask_task():
-    logger.info("🌐 Flask запускается...")
-    app = Flask(__name__)
+app = Flask(__name__)
 
-    @app.route('/')
-    def index():
-        return 'Док Куриленко бот работает! 🌸'
-
-    run_simple("0.0.0.0", 10000, app, use_reloader=False)
-
-# Комбинированный запуск
-async def main():
-    loop = asyncio.get_running_loop()
-    flask_future = loop.run_in_executor(None, flask_task)
-    telegram_future = telegram_task()
-    await asyncio.gather(flask_future, telegram_future)
+@app.route('/')
+def index():
+    return 'Док Куриленко бот работает! 🌸'
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    threading.Thread(target=run_telegram_bot).start()
+    app.run(host='0.0.0.0', port=10000)
