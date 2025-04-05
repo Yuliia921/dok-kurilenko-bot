@@ -11,8 +11,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.info("🔧 Старт bot.py")
 
-# Хэндлеры Telegram
+# Хэндлеры Telegram с добавлением print
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("Handler 'start' triggered")
     reply_keyboard = [['Осмотр', 'УЗИ', 'Консультация']]
     await update.message.reply_text(
         'Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:',
@@ -20,6 +21,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("Handler 'handle_message' triggered")
     await update.message.reply_text("Протокол принят. Спасибо 🌸")
 
 # Telegram-бот (в отдельном потоке с event loop)
