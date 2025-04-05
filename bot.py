@@ -3,35 +3,46 @@ import logging
 import threading
 from flask import Flask
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import (
+    ApplicationBuilder, CommandHandler, MessageHandler,
+    ContextTypes, filters
+)
 import asyncio
 
-# Настройка логирования
+# Настройка логов
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.info("🔧 Старт bot.py")
 
-# Хэндлеры Telegram с логами
+# Логирование всех апдейтов
+async def log_all_updates(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("📩 Update received:")
+    print(update)
+
+# Хэндлер /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("Handler 'start' triggered")
+    print("✅ Handler 'start' triggered")
     reply_keyboard = [['Осмотр', 'УЗИ', 'Консультация']]
     await update.message.reply_text(
         'Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:',
         reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
     )
 
+# Хэндлер обычных сообщений
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("Handler 'handle_message' triggered")
+    print("✉️ Handler 'handle_message' triggered")
     await update.message.reply_text("Протокол принят. Спасибо 🌸")
 
-# Telegram-бот (в отдельном потоке с event loop)
+# Запуск Telegram-бота
 def run_telegram_bot():
     logger.info("🚀 Telegram-бот запускается...")
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+
     app = ApplicationBuilder().token("7591394007:AAHBZWhMJgpmnKY85suJaJ5AW_RpwPTZ9VI").build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.ALL, log_all_updates))  # Логирование всего
 
     async def run():
         await app.initialize()
@@ -44,12 +55,12 @@ def run_telegram_bot():
     loop.run_until_complete(run())
 
 # Flask-заглушка
-app = Flask(__name__)
+flask_app = Flask(__name__)
 
-@app.route('/')
+@flask_app.route('/')
 def index():
     return 'Док Куриленко бот работает! 🌸'
 
 if __name__ == '__main__':
     threading.Thread(target=run_telegram_bot).start()
-    app.run(host='0.0.0.0', port=10000)
+    flask_app.run(host='0.0.0.0', port=10000)
