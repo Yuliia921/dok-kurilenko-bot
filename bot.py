@@ -36,7 +36,7 @@ def run_telegram_bot():
         await app.start()
         await app.bot.set_my_commands([("start", "Запустить бота")])
         logger.info("✅ Telegram-бот запущен!")
-        await app.idle()
+        await asyncio.Future()  # Заменяем idle() на await asyncio.Future()
 
     loop.run_until_complete(run())
 
