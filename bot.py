@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.info("🔧 Старт bot.py")
 
-# Хэндлеры Telegram с добавлением print
+# Хэндлеры Telegram с логами
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Handler 'start' triggered")
     reply_keyboard = [['Осмотр', 'УЗИ', 'Консультация']]
@@ -35,10 +35,11 @@ def run_telegram_bot():
 
     async def run():
         await app.initialize()
+        await app.bot.delete_webhook(drop_pending_updates=True)
         await app.start()
         await app.bot.set_my_commands([("start", "Запустить бота")])
         logger.info("✅ Telegram-бот запущен!")
-        await asyncio.Future()  # Заменяем idle() на await asyncio.Future()
+        await asyncio.Future()
 
     loop.run_until_complete(run())
 
