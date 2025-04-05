@@ -19,7 +19,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Telegram бот
 def run_telegram_bot():
     async def main():
-        app = ApplicationBuilder().token("7591394007:AAHBZWhMJgpmnKY85suJaJ5AW_RpwPTZ9VI").build()
+        app = ApplicationBuilder().token("7591394007:AAHfjNZqLjdDDP0LpUfL7GvecfiZEgCAY_8").build()
         app.add_handler(CommandHandler("start", start))
         await app.bot.delete_webhook(drop_pending_updates=True)
         await app.start()
