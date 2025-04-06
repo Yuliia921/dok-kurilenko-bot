@@ -43,21 +43,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, начните с команды /start")
 
 def generate_pdf(fields: dict) -> str:
-    path = "consultation.pdf"
+    os.makedirs("/mnt/data", exist_ok=True)
+    path = "/mnt/data/consultation.pdf"
     c = canvas.Canvas(path)
-    c.setFont("Helvetica", 14)
+    c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(300, 800, "Консультативное заключение")
-    y = 770
+    c.line(100, 795, 500, 795)
     c.setFont("Helvetica", 12)
+    y = 770
     for k, v in fields.items():
-        c.drawString(50, y, f"{k}: {v}")
+        c.drawString(100, y, f"{k}: {v}")
         y -= 25
-    y -= 15
-    c.drawString(50, y, "+37455987715")
-    y -= 20
-    c.drawString(50, y, "https://t.me/doc_Kurilenko")
-    y -= 40
-    c.drawString(50, y, "Врач акушер-гинеколог Куриленко Юлия Сергеевна")
+    c.setFont("Helvetica", 10)
+    c.drawString(100, y - 20, "+37455987715")
+    c.drawString(100, y - 40, "https://t.me/doc_Kurilenko")
+    c.drawString(100, y - 60, "врач акушер-гинеколог Куриленко Юлия Сергеевна")
     c.save()
     return path
 
