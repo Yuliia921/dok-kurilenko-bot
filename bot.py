@@ -1,7 +1,11 @@
+
 import logging
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
 
 TOKEN = "7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU"
 
@@ -9,6 +13,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 user_data = {}
+
+# Регистрируем кириллический шрифт
+pdfmetrics.registerFont(TTFont("DejaVuSans", "DejaVuSans.ttf"))
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["Консультативное заключение"]]
@@ -42,9 +49,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, начните с команды /start")
 
 def generate_pdf(fields: dict) -> str:
-    path = "/mnt/data/consultation.pdf"
+    path = "consultation.pdf"
     c = canvas.Canvas(path)
-    c.setFont("Helvetica", 12)
+    c.setFont("DejaVuSans", 12)
     c.drawString(100, 800, "Консультативное заключение")
     y = 770
     for k, v in fields.items():
