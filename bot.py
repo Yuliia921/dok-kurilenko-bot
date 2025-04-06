@@ -2,60 +2,42 @@
 import logging
 from flask import Flask
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
-import threading
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 import asyncio
-from telegram.request import HTTPXRequest
 
-# Логи
+# Настройка логов
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.info("🔧 Запуск нового бота с новым токеном и логами...")
+logger.info("🔁 Бот запускается через run_polling...")
 
-# Хэндлер /start
+# Хэндлеры
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info("✅ Получена команда /start")
-    await update.message.reply_text("Бот с новым токеном жив! 🌸")
+    await update.message.reply_text("Док Куриленко 🌸 на связи! Новый бот, новый стиль!")
 
-# Хэндлер на любое сообщение
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    logger.info(f"📩 Получено сообщение: {update.message.text}")
-    await update.message.reply_text("Сообщение получено 🌸")
-
-# Telegram бот
-def run_telegram_bot():
-    async def main():
-        request = HTTPXRequest(
-            http_version="1.1",
-            read_timeout=30,
-            write_timeout=30,
-            connect_timeout=30,
-            pool_timeout=30
-        )
-
-        app = ApplicationBuilder().token("7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU").request(request).build()
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(MessageHandler(filters.ALL, echo))
-
-        await app.bot.delete_webhook(drop_pending_updates=True)
-        await app.initialize()
-        await app.start()
-        await asyncio.Future()
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(main())
-    except Exception as e:
-        logger.error(f"❌ Ошибка при запуске бота: {e}")
+    logger.info(f"📩 Сообщение от пользователя: {update.message.text}")
+    await update.message.reply_text("Принято 🌸")
 
 # Flask-заглушка
-app = Flask(__name__)
+flask_app = Flask(__name__)
 
-@app.route("/")
+@flask_app.route("/")
 def index():
-    return "Док Куриленко 🌸 Новый бот работает!"
+    return "Док Куриленко 🌸 Бот работает (polling)"
+
+# Telegram бот (запускается в потоке)
+def run_bot():
+    async def main():
+        app = ApplicationBuilder().token("7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU").build()
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+        logger.info("🚀 Запуск polling...")
+        await app.run_polling()
+
+    asyncio.run(main())
 
 if __name__ == "__main__":
-    threading.Thread(target=run_telegram_bot).start()
-    app.run(host="0.0.0.0", port=10000)
+    import threading
+    threading.Thread(target=run_bot).start()
+    flask_app.run(host="0.0.0.0", port=10000)
