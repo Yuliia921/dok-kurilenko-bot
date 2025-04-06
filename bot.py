@@ -78,7 +78,7 @@ def main():
 
     app.add_handler(exam_conv)
 
-    async def set_commands():
+    async def set_commands(_: ContextTypes.DEFAULT_TYPE):
         await app.bot.set_my_commands([
             BotCommand("start", "Запустить бота"),
             BotCommand("cancel", "Отменить ввод"),
