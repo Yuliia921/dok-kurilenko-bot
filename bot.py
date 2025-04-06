@@ -38,8 +38,7 @@ async def receive_exam(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     summary = "\n".join([f"{k}: {v}" for k, v in context.user_data.items()])
     await update.message.reply_text(f"🌸 Протокол 'Осмотр':\n{summary}")
-    logger.info(f"✅ Протокол сформирован для {update.effective_user.first_name}:
-{summary}")
+    logger.info(f"✅ Протокол сформирован для {update.effective_user.first_name}:\n{summary}")
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
