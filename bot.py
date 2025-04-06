@@ -16,7 +16,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
     await update.message.reply_text(
         "Добро пожаловать в Док Куриленко 🌸"
-Выберите шаблон:",
+"Выберите шаблон:",
         reply_markup=reply_markup
     )
 
