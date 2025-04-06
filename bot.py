@@ -25,8 +25,7 @@ def index():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [['Консультативное заключение']]
     await update.message.reply_text(
-        'Добро пожаловать в Док Куриленко 🌸
-Выберите шаблон:',
+        'Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:',
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
     )
 
