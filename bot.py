@@ -5,25 +5,29 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import threading
 import asyncio
-import httpx
 from telegram.request import HTTPXRequest
 
 # Настройка логов
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.info("🛠️ Бот с таймаутами и инициализацией запускается...")
+logger.info("🔧 Бот запускается с корректной настройкой таймаутов...")
 
 # Хэндлер /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("✅ /start получен")
-    await update.message.reply_text("Бот работает с таймаутами и инициализацией! 🌸")
+    await update.message.reply_text("Бот работает с таймаутами и правильной инициализацией! 🌸")
 
 # Telegram бот
 def run_telegram_bot():
     async def main():
-        # HTTP-клиент с таймаутом
-        httpx_client = httpx.AsyncClient(timeout=30)
-        request = HTTPXRequest(http_version="1.1", client=httpx_client)
+        # Настраиваем HTTPXRequest с таймаутами
+        request = HTTPXRequest(
+            http_version="1.1",
+            read_timeout=30,
+            write_timeout=30,
+            connect_timeout=30,
+            pool_timeout=30
+        )
 
         app = ApplicationBuilder().token("7591394007:AAHfjNZqLjdDDP0LpUfL7GvecfiZEgCAY_8").request(request).build()
         app.add_handler(CommandHandler("start", start))
@@ -44,7 +48,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return "Док Куриленко бот 🌸 (с таймаутами и initialize)"
+    return "Док Куриленко бот 🌸 (v.20.3, таймауты совместимы)"
 
 if __name__ == "__main__":
     threading.Thread(target=run_telegram_bot).start()
