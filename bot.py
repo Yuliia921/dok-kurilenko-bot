@@ -56,7 +56,6 @@ def run_bot():
         await application.bot.set_my_commands([("start", "Запустить бота")])
         logger.info("✅ Бот запущен")
         await application.updater.start_polling()
-        await application.updater.idle()
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
