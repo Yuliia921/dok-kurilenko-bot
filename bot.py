@@ -1,51 +1,61 @@
-import os
 import logging
-import asyncio
-from flask import Flask
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, ReplyKeyboardMarkup, InputFile
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from reportlab.pdfgen import canvas
 
-# Логирование
+TOKEN = "7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU"
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.info("🔧 Старт bot.py")
 
-# Flask-заглушка
-web_app = Flask(__name__)
+user_data = {}
 
-@web_app.route('/')
-def index():
-    return "Док Куриленко бот работает! 🌸"
-
-# Telegram хэндлеры
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    reply_keyboard = [['Осмотр', 'УЗИ', 'Консультация']]
-    await update.message.reply_text(
-        "Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-    )
+    keyboard = [["Консультативное заключение"]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    await update.message.reply_text("Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:", reply_markup=reply_markup)
 
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Протокол принят. Спасибо 🌸")
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    chat_id = update.effective_chat.id
 
-# Основной запуск
-async def run_bot():
-    app = ApplicationBuilder().token("7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU").build()
+    if text == "Консультативное заключение":
+        user_data[chat_id] = {"шаблон": "заключение", "поля": {}, "шаг": 0}
+        await update.message.reply_text("Введите ФИО пациента:")
+    elif chat_id in user_data:
+        data = user_data[chat_id]
+        шаг = data["шаг"]
+        поля = ["ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"]
+
+        if шаг < len(поля):
+            data["поля"][поля[шаг]] = text
+            data["шаг"] += 1
+            if data["шаг"] < len(поля):
+                await update.message.reply_text(f"Введите {поля[data['шаг']]}:")
+            else:
+                filepath = generate_pdf(data["поля"])
+                await update.message.reply_document(InputFile(filepath), caption="Консультативное заключение 🌸")
+                del user_data[chat_id]
+        else:
+            await update.message.reply_text("Шаблон завершён.")
+    else:
+        await update.message.reply_text("Пожалуйста, начните с команды /start")
+
+def generate_pdf(fields: dict) -> str:
+    path = "/mnt/data/consultation.pdf"
+    c = canvas.Canvas(path)
+    c.setFont("Helvetica", 12)
+    c.drawString(100, 800, "Консультативное заключение")
+    y = 770
+    for k, v in fields.items():
+        c.drawString(100, y, f"{k}: {v}")
+        y -= 25
+    c.drawString(100, y - 20, "Куриленко Ю.С.")
+    c.save()
+    return path
+
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    await app.bot.delete_webhook(drop_pending_updates=True)
-    logger.info("✅ Бот запущен")
-    await app.run_polling()
-
-if __name__ == '__main__':
-    # Запуск Flask и Telegram параллельно
-    def start():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(run_bot())
-
-    import threading
-    threading.Thread(target=start).start()
-
-    port = int(os.environ.get("PORT", 10000))
-    web_app.run(host='0.0.0.0', port=port)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run_polling()
