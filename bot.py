@@ -1,67 +1,76 @@
-
 import logging
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from flask import Flask
 import threading
 import asyncio
-import os
-from reportlab.pdfgen import canvas
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.info("🔧 Старт bot.py")
 
-flask_app = Flask(__name__)
-
-@flask_app.route('/')
-def index():
-    return 'Док Куриленко бот работает! 🌸'
-
+# Хендлер старт
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_keyboard = [['Консультативное заключение']]
     await update.message.reply_text(
         "Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True),
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
     )
 
+# Хендлер сообщений
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "Консультативное заключение":
-        await update.message.reply_text("Пожалуйста, введите данные заключения в формате:\nФИО; Возраст; Диагноз; Обследование; Рекомендации")
-    elif ";" in text:
-        try:
-            fio, age, diagnosis, exam, rec = [x.strip() for x in text.split(";")]
-            file_path = f"/tmp/{fio.replace(' ', '_')}_zakl.pdf"
-            c = canvas.Canvas(file_path)
-            c.drawString(100, 800, f"ФИО: {fio}")
-            c.drawString(100, 780, f"Возраст: {age}")
-            c.drawString(100, 760, f"Диагноз: {diagnosis}")
-            c.drawString(100, 740, f"Обследование: {exam}")
-            c.drawString(100, 720, f"Рекомендации: {rec}")
-            c.drawString(100, 700, "Врач: Куриленко Ю.С.")
-            c.save()
-            await update.message.reply_document(document=open(file_path, "rb"), filename="zakluchenie.pdf")
-        except Exception as e:
-            await update.message.reply_text("Ошибка при обработке заключения. Проверьте формат.")
-            logger.error(f"❌ Ошибка при генерации PDF: {e}")
+    if update.message.text == "Консультативное заключение":
+        await update.message.reply_text("Введите ФИО пациента:")
+        context.user_data["state"] = "fio"
+    elif context.user_data.get("state") == "fio":
+        context.user_data["fio"] = update.message.text
+        await update.message.reply_text("Введите возраст пациента:")
+        context.user_data["state"] = "age"
+    elif context.user_data.get("state") == "age":
+        context.user_data["age"] = update.message.text
+        await update.message.reply_text("Введите диагноз:")
+        context.user_data["state"] = "diagnosis"
+    elif context.user_data.get("state") == "diagnosis":
+        context.user_data["diagnosis"] = update.message.text
+        await update.message.reply_text("Введите обследование:")
+        context.user_data["state"] = "exam"
+    elif context.user_data.get("state") == "exam":
+        context.user_data["exam"] = update.message.text
+        await update.message.reply_text("Введите рекомендации:")
+        context.user_data["state"] = "recommend"
+    elif context.user_data.get("state") == "recommend":
+        context.user_data["recommend"] = update.message.text
+        fio = context.user_data.get("fio", "")
+        age = context.user_data.get("age", "")
+        diagnosis = context.user_data.get("diagnosis", "")
+        exam = context.user_data.get("exam", "")
+        recommend = context.user_data.get("recommend", "")
+        text = f"🌸 Консультативное заключение 🌸\n\nФИО: {fio}\nВозраст: {age}\nДиагноз: {diagnosis}\nОбследование: {exam}\nРекомендации: {recommend}"
+        await update.message.reply_text(text)
+        context.user_data.clear()
     else:
-        await update.message.reply_text("Команда не распознана. Выберите шаблон или следуйте инструкциям.")
+        await update.message.reply_text("Пожалуйста, начните с выбора шаблона.")
 
+# Telegram-бот
 def run_bot():
     async def main():
-        app = ApplicationBuilder().token(os.environ.get("BOT_TOKEN")).build()
+        app = ApplicationBuilder().token("7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU").build()
         app.add_handler(CommandHandler("start", start))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        await app.initialize()
-        await app.start()
-        await app.updater.start_polling()
-        await app.updater.idle()
+        logger.info("✅ Бот запущен")
+        await app.run_polling()
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(main())
 
+# Flask-заглушка
+flask_app = Flask(__name__)
+
+@flask_app.route("/")
+def index():
+    return "Док Куриленко бот работает! 🌸"
+
 if __name__ == "__main__":
     threading.Thread(target=run_bot).start()
-    flask_app.run(host='0.0.0.0', port=10000)
+    flask_app.run(host="0.0.0.0", port=10000)
