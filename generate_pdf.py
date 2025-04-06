@@ -1,1 +1,1 @@
-# код генерации PDF
+# pdf generation logic
