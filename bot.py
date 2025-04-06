@@ -2,25 +2,29 @@
 import logging
 from flask import Flask
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 import threading
 import asyncio
 from telegram.request import HTTPXRequest
 
-# Настройка логов
+# Логи
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.info("🔧 Бот запускается с корректной настройкой таймаутов...")
+logger.info("🔧 Запуск нового бота с новым токеном и логами...")
 
 # Хэндлер /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("✅ /start получен")
-    await update.message.reply_text("Бот работает с таймаутами и правильной инициализацией! 🌸")
+    logger.info("✅ Получена команда /start")
+    await update.message.reply_text("Бот с новым токеном жив! 🌸")
+
+# Хэндлер на любое сообщение
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.info(f"📩 Получено сообщение: {update.message.text}")
+    await update.message.reply_text("Сообщение получено 🌸")
 
 # Telegram бот
 def run_telegram_bot():
     async def main():
-        # Настраиваем HTTPXRequest с таймаутами
         request = HTTPXRequest(
             http_version="1.1",
             read_timeout=30,
@@ -29,8 +33,10 @@ def run_telegram_bot():
             pool_timeout=30
         )
 
-        app = ApplicationBuilder().token("7591394007:AAHfjNZqLjdDDP0LpUfL7GvecfiZEgCAY_8").request(request).build()
+        app = ApplicationBuilder().token("7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU").request(request).build()
         app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.ALL, echo))
+
         await app.bot.delete_webhook(drop_pending_updates=True)
         await app.initialize()
         await app.start()
@@ -48,7 +54,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
-    return "Док Куриленко бот 🌸 (v.20.3, таймауты совместимы)"
+    return "Док Куриленко 🌸 Новый бот работает!"
 
 if __name__ == "__main__":
     threading.Thread(target=run_telegram_bot).start()
