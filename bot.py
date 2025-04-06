@@ -42,7 +42,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, начните с команды /start")
 
 def generate_pdf(fields: dict) -> str:
-    path = "/mnt/data/consultation.pdf"
+    path = "consultation.pdf"
     c = canvas.Canvas(path)
     c.setFont("Helvetica", 12)
     c.drawString(100, 800, "Консультативное заключение")
