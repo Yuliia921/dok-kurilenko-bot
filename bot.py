@@ -1,117 +1,68 @@
-
 import logging
-import io
-from telegram import Update, ReplyKeyboardMarkup, BotCommand, InputFile
+from flask import Flask
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
-    ApplicationBuilder, CommandHandler, MessageHandler,
-    ConversationHandler, ContextTypes, filters
+    ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 )
-from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from datetime import datetime
+from io import BytesIO
+import asyncio
+import threading
 
+# Настройка логов
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.info("🔧 Запуск Док Куриленко")
 
-FIO, AGE, DIAGNOSIS, EXAM, RECOMMENDATION = range(5)
+# Flask-заглушка
+flask_app = Flask(__name__)
 
+@flask_app.route('/')
+def index():
+    return 'Док Куриленко бот работает! 🌸'
+
+# Команды и обработчики
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[
-        "Консультативное заключение"
-    ]]
+    keyboard = [['Консультативное заключение']]
     await update.message.reply_text(
-        "🌸 Док Куриленко. Выберите шаблон:",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        'Добро пожаловать в Док Куриленко 🌸
+Выберите шаблон:',
+        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
     )
 
-async def start_consult(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.clear()
-    context.user_data["Дата"] = datetime.now().strftime("%d.%m.%Y")
-    await update.message.reply_text("Введите ФИО пациента:")
-    return FIO
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.text == 'Консультативное заключение':
+        await update.message.reply_text('Введите текст заключения:')
+        return
 
-async def receive_fio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["ФИО"] = update.message.text
-    await update.message.reply_text("Возраст:")
-    return AGE
-
-async def receive_age(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["Возраст"] = update.message.text
-    await update.message.reply_text("Диагноз:")
-    return DIAGNOSIS
-
-async def receive_diagnosis(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["Диагноз"] = update.message.text
-    await update.message.reply_text("Обследование:")
-    return EXAM
-
-async def receive_exam(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["Обследование"] = update.message.text
-    await update.message.reply_text("Рекомендации:")
-    return RECOMMENDATION
-
-async def receive_recommendation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["Рекомендации"] = update.message.text
-    await update.message.reply_text("📄 Генерирую PDF...")
-
-    buffer = io.BytesIO()
-    p = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    y = height - 50
-
-    p.setFont("Helvetica", 14)
-    p.drawString(100, y, "🌸 Консультативное заключение")
-    p.setFont("Helvetica", 11)
-    y -= 30
-    for key, value in context.user_data.items():
-        p.drawString(50, y, f"{key}: {value}")
-        y -= 20
-    y -= 20
-    p.drawString(50, y, "Подпись: Куриленко Ю.С.")
-
-    p.showPage()
+    text = update.message.text
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer)
+    p.setFont("Helvetica", 12)
+    p.drawString(100, 800, "Консультативное заключение:")
+    p.drawString(100, 780, text)
+    p.drawString(100, 740, "Подпись: Куриленко Ю.С.")
     p.save()
     buffer.seek(0)
+    await update.message.reply_document(document=buffer, filename="konsultaciya.pdf")
+    logger.info(f"✅ PDF отправлен: {text}")
 
-    await update.message.reply_document(
-        document=InputFile(buffer, filename="konsultaciya.pdf"),
-        caption="Ваше консультативное заключение готово 🌸"
-    )
+def run_bot():
+    async def main():
+        application = ApplicationBuilder().token("7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU").build()
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        await application.initialize()
+        await application.start()
+        await application.bot.set_my_commands([("start", "Запустить бота")])
+        logger.info("✅ Бот запущен")
+        await application.updater.start_polling()
+        await application.updater.idle()
 
-    return ConversationHandler.END
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(main())
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❌ Ввод отменён.")
-    return ConversationHandler.END
-
-def main():
-    app = ApplicationBuilder().token("7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU").build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("cancel", cancel))
-
-    consult_conv = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("^(Консультативное заключение)$"), start_consult)],
-        states={
-            FIO: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_fio)],
-            AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_age)],
-            DIAGNOSIS: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_diagnosis)],
-            EXAM: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_exam)],
-            RECOMMENDATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_recommendation)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel)],
-    )
-
-    app.add_handler(consult_conv)
-
-    async def set_commands(_: ContextTypes.DEFAULT_TYPE):
-        await app.bot.set_my_commands([
-            BotCommand("start", "Запустить бота"),
-            BotCommand("cancel", "Отменить ввод")
-        ])
-
-    app.post_init = set_commands
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    threading.Thread(target=run_bot).start()
+    flask_app.run(host='0.0.0.0', port=10000)
