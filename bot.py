@@ -1,6 +1,8 @@
 import os
 import logging
 import telegram
+import fpdf
+print(">>> fpdf version:", fpdf.__version__)
 from telegram.error import Conflict
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters

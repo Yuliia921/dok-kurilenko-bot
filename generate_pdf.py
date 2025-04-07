@@ -15,8 +15,8 @@ def generate_pdf(fields: dict) -> str:
     pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
     pdf.set_font("DejaVu", size=14)
     pdf.cell(200, 10, txt="Консультативное заключение", ln=True, align="C")
+    pdf.ln(5)
     pdf.line(10, 20, 200, 20)
-    pdf.ln(10)
 
     pdf.set_font("DejaVu", size=12)
     for k, v in fields.items():
