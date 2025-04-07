@@ -4,7 +4,8 @@ from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from generate_pdf import generate_pdf
 
-TOKEN = "7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU"
+TOKEN = os.getenv("BOT_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,8 +45,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("Пожалуйста, начните с команды /start")
 
-if __name__ == "__main__":
+async def main():
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run_polling()
+    await app.initialize()
+    await app.start()
+    await app.bot.set_webhook(url=WEBHOOK_URL)
+    await app.updater.start_polling()  # Просто чтобы держал активность
+    await app.updater.idle()
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
