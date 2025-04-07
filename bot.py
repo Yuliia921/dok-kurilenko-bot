@@ -46,7 +46,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             first_field = templates[text][0]
             saved = user_memory.get(user_id, {}).get(first_field)
             if saved:
-                await update.message.reply_text(f"{first_field} (текущее: {saved}):")
+                await update.message.reply_text(f"{first_field} (текущее: {saved}):", reply_markup=ReplyKeyboardMarkup([["✅ Оставить текущее"]], one_time_keyboard=True))
             else:
                 await update.message.reply_text(f"Введите значение поля: {first_field}")
         else:
@@ -59,7 +59,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data = state["data"]
 
         field_name = fields[step]
-        if text.strip() == "" and user_memory.get(user_id, {}).get(field_name):
+        if text.strip() in ["", "✅ Оставить текущее"] and user_memory.get(user_id, {}).get(field_name):
             data[field_name] = user_memory[user_id][field_name]
         else:
             data[field_name] = text.strip()
@@ -71,7 +71,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             next_field = fields[step]
             saved = user_memory.get(user_id, {}).get(next_field)
             if saved:
-                await update.message.reply_text(f"{next_field} (текущее: {saved}):")
+                await update.message.reply_text(f"{next_field} (текущее: {saved}):", reply_markup=ReplyKeyboardMarkup([["✅ Оставить текущее"]], one_time_keyboard=True))
             else:
                 await update.message.reply_text(f"Введите значение поля: {next_field}")
         else:
