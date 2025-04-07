@@ -20,7 +20,7 @@ def generate_pdf(fields: dict) -> str:
 
     pdf.set_font("DejaVu", size=12)
     for k, v in fields.items():
-        pdf.multi_cell(0, 10, txt=f"{k}: {v}")
+        pdf.multi_cell(180, 10, txt=f"{k}: {v}")
 
     pdf.ln(5)
     pdf.cell(0, 10, txt="Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
