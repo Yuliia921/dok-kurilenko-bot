@@ -1,35 +1,16 @@
 import os
-import logging
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from telegram import ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InputFile
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, CommandHandler, filters
 from generate_pdf import generate_pdf
-from io import BytesIO
-import fpdf
-print(">>> fpdf version:", fpdf.__version__)
+from templates import templates
 
-logging.basicConfig(level=logging.INFO)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN:
-    raise ValueError("❌ Переменная окружения BOT_TOKEN не задана! Укажите её в настройках Render.")
-
-app = Application.builder().token(BOT_TOKEN).build()
-
-templates = {
-    "Консультативное заключение": [
-        "ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"
-    ],
-    "УЗИ малого таза": [
-        "ФИО", "Дата последней менструации", "Матка (положение, форма, размеры, структура)",
-        "М-эхо", "Шейка матки", "Правый яичник", "Левый яичник",
-        "Дополнительные образования", "Свободная жидкость", "Заключение", "Рекомендации"
-    ]
-}
 
 user_state = {}
-user_memory = {}
 
-print("✅ Бот запущен и готов к работе")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[k] for k in templates] + [["🛑 Стоп"]]
+    await update.message.reply_text("Выберите шаблон:", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -37,75 +18,41 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
         del user_state[user_id]
         await update.message.reply_text("⛔️ Ввод прерван. Вы можете начать заново с /start", reply_markup=ReplyKeyboardRemove())
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[k] for k in templates] + [["🛑 Стоп"]]
-    await update.message.reply_text(
-        "Выберите шаблон:", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-    )
-
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
 
+    if text == "🛑 Стоп":
+        await stop(update, context)
+        return
+
     if user_id not in user_state:
-        if text == "🛑 Стоп":
-            await stop(update, context)
-            return
-    if text == "🛑 Стоп":
-        await stop(update, context)
-        return
-
-    if text == "🛑 Стоп":
-        await stop(update, context)
-        return
-    if text == "🛑 Стоп":
-        await stop(update, context)
-        return
-    if text in templates:
+        if text in templates:
             user_state[user_id] = {"template": text, "data": {}, "step": 0}
-            first_field = templates[text][0]
-    if user_id in user_state:
-        state = user_state[user_id]
+            field = templates[text]["fields"][0]
+            await update.message.reply_text(f"Введите {field}:")
+        else:
+            await update.message.reply_text("Пожалуйста, выберите шаблон из меню.")
+        return
+
+    state = user_state[user_id]
+    fields = templates[state["template"]]["fields"]
+    if state["step"] < len(fields):
+        state["data"][fields[state["step"]]] = text
+        state["step"] += 1
+
+    if state["step"] == len(fields):
+        filepath = generate_pdf(state["template"], state["data"])
+        await update.message.reply_document(document=InputFile(filepath), filename=os.path.basename(filepath))
+        del user_state[user_id]
     else:
-        state = user_state[user_id]
-        template = state["template"]
-        fields = templates[template]
-        step = state["step"]
-        data = state["data"]
+        next_field = fields[state["step"]]
+        await update.message.reply_text(f"Введите {next_field}:")
 
-        field_name = fields[step]
-        if text.strip() in ["", "✅ Оставить текущее"] and user_memory.get(user_id, {}).get(field_name):
-            data[field_name] = user_memory[user_id][field_name]
-        else:
-            data[field_name] = text.strip()
-
-        step += 1
-        state["step"] = step
-
-        if step < len(fields):
-            next_field = fields[step]
-            saved = user_memory.get(user_id, {}).get(next_field)
-            if saved:
-                await update.message.reply_text(f"{next_field} (текущее: {saved}):", reply_markup=ReplyKeyboardMarkup([["✅ Оставить текущее"]], one_time_keyboard=True, resize_keyboard=True))
-            else:
-                await update.message.reply_text(f"Введите значение поля: {next_field}", reply_markup=ReplyKeyboardRemove())
-        else:
-            user_memory[user_id] = {
-                key: data[key] for key in ["ФИО", "Возраст", "Диагноз"] if key in data
-            }
-            filepath = generate_pdf(data)
-            with open(filepath, "rb") as f:
-                pdf_bytes = BytesIO(f.read())
-                pdf_bytes.name = os.path.basename(filepath)
-                await context.bot.send_document(
-                    chat_id=update.effective_chat.id,
-                    document=pdf_bytes
-                )
-            del user_state[user_id]
-
-# Регистрируем хендлеры
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("stop", stop))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-app.run_polling()
+if __name__ == "__main__":
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run_polling()
