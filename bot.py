@@ -27,9 +27,9 @@ templates = {
 }
 
 user_state = {}
+user_memory = {}
 
-@app.post_init
-async def startup(app): print("✅ Бот запущен и готов к работе")
+print("✅ Бот запущен и готов к работе")
 
 @app.on_message(filters.COMMAND)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -45,23 +45,43 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id not in user_state:
         if text in templates:
-            user_state[user_id] = {"template": text, "data": {}}
-            field = templates[text][0]
-            await update.message.reply_text(f"Введите значение поля: {field}")
+            user_state[user_id] = {"template": text, "data": {}, "step": 0}
+            first_field = templates[text][0]
+            saved = user_memory.get(user_id, {}).get(first_field)
+            if saved:
+                await update.message.reply_text(f"{first_field} (текущее: {saved}):")
+            else:
+                await update.message.reply_text(f"Введите значение поля: {first_field}")
         else:
             await update.message.reply_text("Пожалуйста, выберите шаблон из меню.")
     else:
         state = user_state[user_id]
         template = state["template"]
         fields = templates[template]
+        step = state["step"]
         data = state["data"]
-        current_index = len(data)
-        data[fields[current_index]] = text
 
-        if current_index + 1 < len(fields):
-            next_field = fields[current_index + 1]
-            await update.message.reply_text(f"Введите значение поля: {next_field}")
+        field_name = fields[step]
+        if text.strip() == "" and user_memory.get(user_id, {}).get(field_name):
+            data[field_name] = user_memory[user_id][field_name]
         else:
+            data[field_name] = text.strip()
+
+        step += 1
+        state["step"] = step
+
+        if step < len(fields):
+            next_field = fields[step]
+            saved = user_memory.get(user_id, {}).get(next_field)
+            if saved:
+                await update.message.reply_text(f"{next_field} (текущее: {saved}):")
+            else:
+                await update.message.reply_text(f"Введите значение поля: {next_field}")
+        else:
+            # Сохраняем ключевые поля
+            user_memory[user_id] = {
+                key: data[key] for key in ["ФИО", "Возраст", "Диагноз"] if key in data
+            }
             filepath = generate_pdf(data)
             with open(filepath, "rb") as f:
                 pdf_bytes = BytesIO(f.read())
