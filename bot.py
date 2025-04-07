@@ -1,6 +1,5 @@
 import os
 import logging
-import telegram
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from generate_pdf import generate_pdf
@@ -31,14 +30,12 @@ user_memory = {}
 
 print("✅ Бот запущен и готов к работе")
 
-@app.on_message(filters.COMMAND)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[k] for k in templates]
     await update.message.reply_text(
         "Выберите шаблон:", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
     )
 
-@app.on_message(filters.TEXT & ~filters.COMMAND)
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
@@ -78,7 +75,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await update.message.reply_text(f"Введите значение поля: {next_field}")
         else:
-            # Сохраняем ключевые поля
             user_memory[user_id] = {
                 key: data[key] for key in ["ФИО", "Возраст", "Диагноз"] if key in data
             }
@@ -91,5 +87,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     document=pdf_bytes
                 )
             del user_state[user_id]
+
+# Регистрируем хендлеры
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 app.run_polling()
