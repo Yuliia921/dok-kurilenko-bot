@@ -2,6 +2,7 @@ import os
 import logging
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import ReplyKeyboardRemove
 from generate_pdf import generate_pdf
 from io import BytesIO
 import fpdf
@@ -30,6 +31,12 @@ user_memory = {}
 
 print("✅ Бот запущен и готов к работе")
 
+async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id in user_state:
+        del user_state[user_id]
+        await update.message.reply_text("⛔️ Ввод прерван. Вы можете начать заново с /start", reply_markup=ReplyKeyboardRemove())
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[k] for k in templates]
     await update.message.reply_text(
@@ -46,9 +53,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             first_field = templates[text][0]
             saved = user_memory.get(user_id, {}).get(first_field)
             if saved:
-                await update.message.reply_text(f"{first_field} (текущее: {saved}):", reply_markup=ReplyKeyboardMarkup([["✅ Оставить текущее"]], one_time_keyboard=True))
+                await update.message.reply_text(f"{first_field} (текущее: {saved}):", reply_markup=ReplyKeyboardMarkup([["✅ Оставить текущее"]], one_time_keyboard=True, resize_keyboard=True))
             else:
-                await update.message.reply_text(f"Введите значение поля: {first_field}")
+                await update.message.reply_text(f"Введите значение поля: {first_field}", reply_markup=ReplyKeyboardRemove())
         else:
             await update.message.reply_text("Пожалуйста, выберите шаблон из меню.")
     else:
@@ -71,9 +78,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             next_field = fields[step]
             saved = user_memory.get(user_id, {}).get(next_field)
             if saved:
-                await update.message.reply_text(f"{next_field} (текущее: {saved}):", reply_markup=ReplyKeyboardMarkup([["✅ Оставить текущее"]], one_time_keyboard=True))
+                await update.message.reply_text(f"{next_field} (текущее: {saved}):", reply_markup=ReplyKeyboardMarkup([["✅ Оставить текущее"]], one_time_keyboard=True, resize_keyboard=True))
             else:
-                await update.message.reply_text(f"Введите значение поля: {next_field}")
+                await update.message.reply_text(f"Введите значение поля: {next_field}", reply_markup=ReplyKeyboardRemove())
         else:
             user_memory[user_id] = {
                 key: data[key] for key in ["ФИО", "Возраст", "Диагноз"] if key in data
@@ -90,6 +97,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Регистрируем хендлеры
 app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("stop", stop))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 app.run_polling()
