@@ -1,42 +1,14 @@
 import os
 import logging
-from fastapi import FastAPI, Request
 from telegram import Update, ReplyKeyboardMarkup, InputFile
-from telegram.ext import (
-    Application, CommandHandler, MessageHandler, ContextTypes, filters
-)
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from generate_pdf import generate_pdf
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+TOKEN = "7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU"
 
-if not BOT_TOKEN:
-    raise ValueError("❌ Переменная окружения BOT_TOKEN не задана! Укажите её в настройках Render.")
-
-if not WEBHOOK_URL:
-    raise ValueError("❌ Переменная окружения WEBHOOK_URL не задана! Укажите её в настройках Render.")
-
-app = FastAPI()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 user_data = {}
-
-application = Application.builder().token(BOT_TOKEN).build()
-
-@app.on_event("startup")
-async def startup():
-    logging.info("🔁 Установка webhook и запуск бота...")
-    await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    await application.initialize()
-    await application.start()
-    logging.info("✅ Бот запущен и готов!")
-
-@app.post("/webhook")
-async def telegram_webhook(request: Request):
-    data = await request.json()
-    update = Update.de_json(data, application.bot)
-    await application.process_update(update)
-    return {"ok": True}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["Консультативное заключение"]]
@@ -71,3 +43,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Шаблон завершён.")
     else:
         await update.message.reply_text("Пожалуйста, начните с команды /start")
+
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.run_polling()
