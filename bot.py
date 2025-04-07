@@ -58,6 +58,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "🛑 Стоп":
         await stop(update, context)
         return
+    if text == "🛑 Стоп":
+        await stop(update, context)
+        return
     if text in templates:
             user_state[user_id] = {"template": text, "data": {}, "step": 0}
             first_field = templates[text][0]
