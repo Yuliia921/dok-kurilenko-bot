@@ -38,7 +38,7 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⛔️ Ввод прерван. Вы можете начать заново с /start", reply_markup=ReplyKeyboardRemove())
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[k] for k in templates]
+    keyboard = [[k] for k in templates] + [["🛑 Стоп"]]
     await update.message.reply_text(
         "Выберите шаблон:", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
     )
@@ -48,7 +48,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
     if user_id not in user_state:
-        if text in templates:
+        if text == "🛑 Стоп":
+        await stop(update, context)
+        return
+    if text in templates:
             user_state[user_id] = {"template": text, "data": {}, "step": 0}
             first_field = templates[text][0]
             saved = user_memory.get(user_id, {}).get(first_field)
