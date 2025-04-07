@@ -1,13 +1,17 @@
-
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 import os
+from datetime import datetime
 
 def generate_pdf(fields: dict) -> str:
     pdfmetrics.registerFont(TTFont("DejaVuSans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
-    path = "consultation.pdf"
+    
+    fio = fields.get("ФИО", "consultation").replace(" ", "_")
+    date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{fio}_{date}.pdf"
+    path = f"/mnt/data/{filename}"
 
     c = canvas.Canvas(path, pagesize=A4)
     c.setFont("DejaVuSans", 14)
