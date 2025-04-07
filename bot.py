@@ -1,5 +1,6 @@
 import os
 import logging
+import telegram
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from generate_pdf import generate_pdf
@@ -37,7 +38,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"Введите {поля[data['шаг']]}:")
             else:
                 filepath = generate_pdf(data["поля"])
-                await update.message.reply_document(InputFile(filepath), caption="Консультативное заключение 🌸")
+                file_size = os.path.getsize(filepath)
+                logger.info(f"📄 PDF создан: {filepath}, размер: {file_size} байт")
+                await update.message.reply_document(
+                    document=InputFile(filepath, filename=os.path.basename(filepath), mime_type="application/pdf"),
+                    caption="Консультативное заключение 🌸"
+                )
                 del user_data[chat_id]
         else:
             await update.message.reply_text("Шаблон завершён.")
@@ -45,6 +51,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, начните с команды /start")
 
 if __name__ == "__main__":
+    # Удаление старого webhook (на случай конфликта)
+    telegram.Bot(token=TOKEN).delete_webhook(drop_pending_updates=True)
+
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
