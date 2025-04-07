@@ -49,11 +49,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id not in user_state:
         if text == "🛑 Стоп":
+            await stop(update, context)
+            return
+    if text == "🛑 Стоп":
         await stop(update, context)
         return
-    if text == "🛑 Стоп":
-    await stop(update, context)
-    return
 
     if text == "🛑 Стоп":
         await stop(update, context)
