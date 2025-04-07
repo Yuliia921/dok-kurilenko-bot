@@ -1,22 +1,21 @@
-import logging
+
 import os
+import logging
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-from reportlab.pdfgen import canvas
+from generate_pdf import generate_pdf
 
 TOKEN = "7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 user_data = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["Консультативное заключение"]]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
     await update.message.reply_text(
-        "Добро пожаловать в Док Куриленко 🌸"
-"Выберите шаблон:",
+        "Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:",
         reply_markup=reply_markup
     )
 
@@ -45,27 +44,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Шаблон завершён.")
     else:
         await update.message.reply_text("Пожалуйста, начните с команды /start")
-
-def generate_pdf(fields: dict) -> str:
-    os.makedirs("data", exist_ok=True)
-    path = "data/consultation.pdf"
-    c = canvas.Canvas(path)
-    c.setFont("Helvetica-Bold", 14)
-    c.drawCentredString(300, 800, "Консультативное заключение")
-    c.setFont("Helvetica", 12)
-    y = 770
-    for k, v in fields.items():
-        c.drawString(100, y, f"{k}: {v}")
-        y -= 25
-    y -= 15
-    c.setFont("Helvetica-Oblique", 10)
-    c.drawString(100, y, "📞 +37455987715")
-    y -= 15
-    c.drawString(100, y, "Telegram: @doc_Kurilenko")
-    y -= 25
-    c.drawString(100, y, "Врач акушер-гинеколог Куриленко Юлия Сергеевна")
-    c.save()
-    return path
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()

@@ -1,27 +1,34 @@
-from reportlab.lib.pagesizes import A4
+
 from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import os
 
 def generate_pdf(fields: dict) -> str:
-    path = "/mnt/data/consultation.pdf"
+    pdfmetrics.registerFont(TTFont("DejaVuSans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
+    path = "consultation.pdf"
+
     c = canvas.Canvas(path, pagesize=A4)
+    c.setFont("DejaVuSans", 14)
     width, height = A4
 
-    c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(width / 2, height - 80, "Консультативное заключение")
-    c.line(70, height - 85, width - 70, height - 85)
+    c.drawCentredString(width / 2, height - 50, "Консультативное заключение")
+    c.line(50, height - 55, width - 50, height - 55)
 
-    c.setFont("Helvetica", 12)
-    y = height - 120
+    y = height - 90
+    c.setFont("DejaVuSans", 12)
     for k, v in fields.items():
         c.drawString(70, y, f"{k}: {v}")
         y -= 25
 
-    c.setFont("Helvetica", 10)
-    c.drawString(70, y - 10, "📞 +37455987715")
-    c.drawString(70, y - 30, "🔗 https://t.me/doc_Kurilenko")
-
-    c.setFont("Helvetica-Oblique", 11)
-    c.drawString(70, y - 60, "Врач акушер-гинеколог Куриленко Юлия Сергеевна")
+    y -= 10
+    c.drawString(70, y, "Врач акушер-гинеколог Куриленко Юлия Сергеевна")
+    y -= 20
+    c.setFont("DejaVuSans", 10)
+    c.drawString(70, y, "📞 +37455987715")
+    y -= 15
+    c.drawString(70, y, "Telegram: https://t.me/doc_Kurilenko")
 
     c.save()
     return path
