@@ -10,6 +10,12 @@ from generate_pdf import generate_pdf
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
+if not BOT_TOKEN:
+    raise ValueError("❌ Переменная окружения BOT_TOKEN не задана! Укажите её в настройках Render.")
+
+if not WEBHOOK_URL:
+    raise ValueError("❌ Переменная окружения WEBHOOK_URL не задана! Укажите её в настройках Render.")
+
 app = FastAPI()
 user_data = {}
 
