@@ -42,7 +42,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 file_size = os.path.getsize(filepath)
                 logger.info(f"📄 PDF создан: {filepath}, размер: {file_size} байт")
                 await update.message.reply_document(
-                    document=InputFile(filepath, filename=os.path.basename(filepath), mime_type="application/pdf"),
+                    document=InputFile(filepath, filename=os.path.basename(filepath)),
                     caption="Консультативное заключение 🌸"
                 )
                 del user_data[chat_id]
