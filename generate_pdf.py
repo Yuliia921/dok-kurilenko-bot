@@ -12,7 +12,8 @@ def generate_pdf(fields: dict) -> str:
     date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"{fio}_{date}.pdf"
 
-    path = os.path.join("/mnt/data", filename)
+    os.makedirs("tmp", exist_ok=True)
+    path = os.path.join("tmp", filename)
 
     c = canvas.Canvas(path, pagesize=A4)
     c.setFont("DejaVuSans", 14)
