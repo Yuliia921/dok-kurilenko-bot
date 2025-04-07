@@ -7,10 +7,13 @@ from datetime import datetime
 
 def generate_pdf(fields: dict) -> str:
     pdfmetrics.registerFont(TTFont("DejaVuSans", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
-    
+
     fio = fields.get("ФИО", "consultation").replace(" ", "_")
     date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"{fio}_{date}.pdf"
+
+    # Создание папки /mnt/data, если её нет
+    os.makedirs("/mnt/data", exist_ok=True)
     path = os.path.join("/mnt/data", filename)
 
     c = canvas.Canvas(path, pagesize=A4)
