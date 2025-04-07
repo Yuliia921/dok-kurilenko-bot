@@ -1,67 +1,75 @@
 import os
 import logging
 import telegram
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from generate_pdf import generate_pdf
+from io import BytesIO
 import fpdf
 print(">>> fpdf version:", fpdf.__version__)
-from io import BytesIO
-from telegram.error import Conflict
-from telegram import Update, ReplyKeyboardMarkup, InputFile
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-from generate_pdf import generate_pdf
-
-TOKEN = "7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU"
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-user_data = {}
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise ValueError("❌ Переменная окружения BOT_TOKEN не задана! Укажите её в настройках Render.")
 
+app = Application.builder().token(BOT_TOKEN).build()
+
+templates = {
+    "Консультативное заключение": [
+        "ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"
+    ],
+    "УЗИ малого таза": [
+        "ФИО", "Дата последней менструации", "Матка (положение, форма, размеры, структура)",
+        "М-эхо", "Шейка матки", "Правый яичник", "Левый яичник",
+        "Дополнительные образования", "Свободная жидкость", "Заключение", "Рекомендации"
+    ]
+}
+
+user_state = {}
+
+@app.post_init
+async def startup(app): print("✅ Бот запущен и готов к работе")
+
+@app.on_message(filters.COMMAND)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [["Консультативное заключение"]]
-    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    keyboard = [[k] for k in templates]
     await update.message.reply_text(
-        "Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:",
-        reply_markup=reply_markup
+        "Выберите шаблон:", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
     )
 
+@app.on_message(filters.TEXT & ~filters.COMMAND)
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
     text = update.message.text
-    chat_id = update.effective_chat.id
 
-    if text == "Консультативное заключение":
-        user_data[chat_id] = {"шаблон": "заключение", "поля": {}, "шаг": 0}
-        await update.message.reply_text("Введите ФИО пациента:")
-    elif chat_id in user_data:
-        data = user_data[chat_id]
-        шаг = data["шаг"]
-        поля = ["ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"]
-
-        if шаг < len(поля):
-            data["поля"][поля[шаг]] = text
-            data["шаг"] += 1
-            if data["шаг"] < len(поля):
-                await update.message.reply_text(f"Введите {поля[data['шаг']]}:")
-            else:
-                filepath = generate_pdf(data["поля"])
-                file_size = os.path.getsize(filepath)
-                logger.info(f"📄 PDF создан: {filepath}, размер: {file_size} байт")
-                await update.message.reply_document(
-                    document=BytesIO(open(filepath, 'rb').read()), filename=os.path.basename(filepath),
-                    caption="Консультативное заключение 🌸"
-                )
-                del user_data[chat_id]
+    if user_id not in user_state:
+        if text in templates:
+            user_state[user_id] = {"template": text, "data": {}}
+            field = templates[text][0]
+            await update.message.reply_text(f"Введите значение поля: {field}")
         else:
-            await update.message.reply_text("Шаблон завершён.")
+            await update.message.reply_text("Пожалуйста, выберите шаблон из меню.")
     else:
-        await update.message.reply_text("Пожалуйста, начните с команды /start")
+        state = user_state[user_id]
+        template = state["template"]
+        fields = templates[template]
+        data = state["data"]
+        current_index = len(data)
+        data[fields[current_index]] = text
 
-if __name__ == "__main__":
-    try:
-        telegram.Bot(token=TOKEN).delete_webhook(drop_pending_updates=True)
-        app = ApplicationBuilder().token(TOKEN).build()
-        app.add_handler(CommandHandler("start", start))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        app.run_polling()
-    except Conflict as e:
-        logger.error("❌ Конфликт: бот уже работает где-то ещё. Завершение.")
-    except Exception as e:
-        logger.exception(f"❌ Ошибка при запуске: {e}")
+        if current_index + 1 < len(fields):
+            next_field = fields[current_index + 1]
+            await update.message.reply_text(f"Введите значение поля: {next_field}")
+        else:
+            filepath = generate_pdf(data)
+            with open(filepath, "rb") as f:
+                pdf_bytes = BytesIO(f.read())
+                pdf_bytes.name = os.path.basename(filepath)
+                await context.bot.send_document(
+                    chat_id=update.effective_chat.id,
+                    document=pdf_bytes
+                )
+            del user_state[user_id]
+
+app.run_polling()

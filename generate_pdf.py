@@ -15,22 +15,18 @@ def generate_pdf(fields: dict) -> str:
     pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
     pdf.add_font("DejaVu", "B", "DejaVuSans-Bold.ttf", uni=True)
     pdf.set_font("DejaVu", size=16)
-    pdf.cell(0, 10, txt="Консультативное заключение", ln=True, align="C")
-    pdf.set_line_width(0.5)
+    pdf.cell(0, 10, txt="🌸 Медицинский протокол", ln=True, align="C")
     pdf.line(10, 20, 200, 20)
     pdf.ln(10)
 
-    pdf.set_font("DejaVu", size=12)
-    labels = ["ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"]
-    for label in labels:
-        value = fields.get(label, "")
+    for k, v in fields.items():
         pdf.set_font("DejaVu", style="B", size=12)
-        pdf.cell(40, 10, txt=f"{label}:", ln=0)
+        pdf.cell(60, 10, txt=f"{k}:", ln=0)
         pdf.set_font("DejaVu", size=12)
-        pdf.multi_cell(0, 10, txt=value)
+        pdf.multi_cell(0, 10, txt=v)
         pdf.ln(2)
 
-    pdf.ln(10)
+    pdf.ln(8)
     pdf.set_font("DejaVu", size=12)
     pdf.cell(0, 10, txt="Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
     pdf.set_font("DejaVu", size=10)
