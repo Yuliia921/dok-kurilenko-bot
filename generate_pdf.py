@@ -1,5 +1,4 @@
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
+from fpdf import FPDF
 import os
 from datetime import datetime
 
@@ -11,26 +10,23 @@ def generate_pdf(fields: dict) -> str:
     os.makedirs("tmp", exist_ok=True)
     path = os.path.join("tmp", filename)
 
-    c = canvas.Canvas(path, pagesize=A4)
-    c.setFont("Helvetica", 14)
-    width, height = A4
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=14)
+    pdf.cell(200, 10, txt="Консультативное заключение", ln=True, align="C")
+    pdf.set_draw_color(0, 0, 0)
+    pdf.line(10, 20, 200, 20)
+    pdf.ln(10)
 
-    c.drawCentredString(width / 2, height - 50, "Консультативное заключение")
-    c.line(50, height - 55, width - 50, height - 55)
-
-    y = height - 90
-    c.setFont("Helvetica", 12)
+    pdf.set_font("Arial", size=12)
     for k, v in fields.items():
-        c.drawString(70, y, f"{k}: {v}")
-        y -= 25
+        pdf.multi_cell(0, 10, txt=f"{k}: {v}")
 
-    y -= 10
-    c.drawString(70, y, "Врач акушер-гинеколог Куриленко Юлия Сергеевна")
-    y -= 20
-    c.setFont("Helvetica", 10)
-    c.drawString(70, y, "📞 +37455987715")
-    y -= 15
-    c.drawString(70, y, "Telegram: https://t.me/doc_Kurilenko")
+    pdf.ln(5)
+    pdf.cell(0, 10, txt="Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
+    pdf.set_font("Arial", size=10)
+    pdf.cell(0, 10, txt="📞 +37455987715", ln=True)
+    pdf.cell(0, 10, txt="Telegram: https://t.me/doc_Kurilenko", ln=True)
 
-    c.save()
+    pdf.output(path)
     return path
