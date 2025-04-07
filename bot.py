@@ -1,15 +1,34 @@
 import os
 import logging
+from fastapi import FastAPI, Request
 from telegram import Update, ReplyKeyboardMarkup, InputFile
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    Application, CommandHandler, MessageHandler, ContextTypes, filters
+)
 from generate_pdf import generate_pdf
 
-TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+app = FastAPI()
 user_data = {}
+
+application = Application.builder().token(BOT_TOKEN).build()
+
+@app.on_event("startup")
+async def startup():
+    await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    await application.initialize()
+    await application.start()
+
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    data = await request.json()
+    update = Update.de_json(data, application.bot)
+    await application.process_update(update)
+    return {"ok": True}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [["Консультативное заключение"]]
@@ -44,17 +63,3 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Шаблон завершён.")
     else:
         await update.message.reply_text("Пожалуйста, начните с команды /start")
-
-async def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    await app.initialize()
-    await app.start()
-    await app.bot.set_webhook(url=WEBHOOK_URL)
-    await app.updater.start_polling()  # Просто чтобы держал активность
-    await app.updater.idle()
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
