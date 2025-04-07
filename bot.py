@@ -69,7 +69,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"{first_field} (текущее: {saved}):", reply_markup=ReplyKeyboardMarkup([["✅ Оставить текущее"]], one_time_keyboard=True, resize_keyboard=True))
             else:
                 await update.message.reply_text(f"Введите значение поля: {first_field}", reply_markup=ReplyKeyboardRemove())
-        else:
+    else:
             await update.message.reply_text("Пожалуйста, выберите шаблон из меню.")
     else:
         state = user_state[user_id]
