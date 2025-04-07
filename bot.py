@@ -3,6 +3,7 @@ import logging
 import telegram
 import fpdf
 print(">>> fpdf version:", fpdf.__version__)
+from io import BytesIO
 from telegram.error import Conflict
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
@@ -44,7 +45,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 file_size = os.path.getsize(filepath)
                 logger.info(f"📄 PDF создан: {filepath}, размер: {file_size} байт")
                 await update.message.reply_document(
-                    document=InputFile(filepath, filename=os.path.basename(filepath)),
+                    document=BytesIO(open(filepath, 'rb').read()), filename=os.path.basename(filepath),
                     caption="Консультативное заключение 🌸"
                 )
                 del user_data[chat_id]
