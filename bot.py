@@ -64,13 +64,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text in templates:
             user_state[user_id] = {"template": text, "data": {}, "step": 0}
             first_field = templates[text][0]
-            saved = user_memory.get(user_id, {}).get(first_field)
-            if saved:
-                await update.message.reply_text(f"{first_field} (текущее: {saved}):", reply_markup=ReplyKeyboardMarkup([["✅ Оставить текущее"]], one_time_keyboard=True, resize_keyboard=True))
-            else:
-                await update.message.reply_text(f"Введите значение поля: {first_field}", reply_markup=ReplyKeyboardRemove())
-    else:
-            await update.message.reply_text("Пожалуйста, выберите шаблон из меню.")
+    if user_id in user_state:
+        state = user_state[user_id]
     else:
         state = user_state[user_id]
         template = state["template"]
