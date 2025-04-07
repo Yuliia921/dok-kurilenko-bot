@@ -13,6 +13,7 @@ def generate_pdf(fields: dict) -> str:
     pdf = FPDF()
     pdf.add_page()
     pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVu", "B", "DejaVuSans-Bold.ttf", uni=True)
     pdf.set_font("DejaVu", size=16)
     pdf.cell(0, 10, txt="Консультативное заключение", ln=True, align="C")
     pdf.set_line_width(0.5)
