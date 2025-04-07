@@ -23,11 +23,13 @@ application = Application.builder().token(BOT_TOKEN).build()
 
 @app.on_event("startup")
 async def startup():
+    logging.info("🔁 Установка webhook и запуск бота...")
     await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     await application.initialize()
     await application.start()
+    logging.info("✅ Бот запущен и готов!")
 
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
