@@ -1,6 +1,7 @@
 import os
 import logging
 import telegram
+from telegram.error import Conflict
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from generate_pdf import generate_pdf
@@ -51,10 +52,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, начните с команды /start")
 
 if __name__ == "__main__":
-    # Удаление старого webhook (на случай конфликта)
-    telegram.Bot(token=TOKEN).delete_webhook(drop_pending_updates=True)
-
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.run_polling()
+    try:
+        telegram.Bot(token=TOKEN).delete_webhook(drop_pending_updates=True)
+        app = ApplicationBuilder().token(TOKEN).build()
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        app.run_polling()
+    except Conflict as e:
+        logger.error("❌ Конфликт: бот уже работает где-то ещё. Завершение.")
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при запуске: {e}")
