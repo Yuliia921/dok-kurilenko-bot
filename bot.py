@@ -1,9 +1,7 @@
 import os
-import logging
 from fastapi import FastAPI, Request
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
-
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from generate_pdf import generate_pdf
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -12,7 +10,6 @@ PORT = int(os.environ.get("PORT", 10000))
 
 app = FastAPI()
 application = Application.builder().token(BOT_TOKEN).build()
-
 user_state = {}
 
 TEMPLATES = {
@@ -62,9 +59,9 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_m
 
 @app.on_event("startup")
 async def on_startup():
+    await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
     await application.initialize()
     await application.start()
-    await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
     print("Webhook установлен")
 
 @app.on_event("shutdown")
@@ -78,7 +75,8 @@ async def telegram_webhook(req: Request):
     update = Update.de_json(data, application.bot)
     await application.process_update(update)
     return "ok"
-    @app.get("/")
+
+@app.get("/")
 async def root():
     return {"status": "ok"}
 
