@@ -1,41 +1,35 @@
-
 import os
+import logging
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, InputFile
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 from generate_pdf import generate_pdf
-from datetime import datetime
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 templates = {
-    "📝 Консультация": [
-        "ФИО", "Возраст", "Жалобы", "Анамнез", "Диагноз", "Рекомендации"
-    ],
-    "🧭 УЗИ": [
-        "ФИО", "Дата последней менструации", "Положение матки", "Размеры матки", "Структура миометрия",
-        "М-эхо", "Состояние шейки", "Размеры и структура яичников", "Наличие образований", "Свободная жидкость",
-        "Заключение", "Рекомендации"
-    ]
+    "Консультативное заключение": ["Дата", "ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"],
+    "УЗИ органов малого таза": ["ФИО", "Дата последней менструации", "Положение матки", "Размеры матки", "Структура миометрия", "M-echo", "Состояние шейки матки", "Размеры яичников", "Фолликулы", "Дополнительно", "Свободная жидкость", "Заключение", "Рекомендации"]
 }
 
 user_state = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[k] for k in templates] + [["🛑 Стоп"]]
-    await update.message.reply_text(
-        "Выберите шаблон:", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-    )
+    keyboard = [[k] for k in templates.keys()] + [["🛑 Стоп"]]
+    await update.message.reply_text("Выберите шаблон:", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id in user_state:
         del user_state[user_id]
-        await update.message.reply_text("⛔️ Ввод прерван. Вы можете начать заново с /start", reply_markup=ReplyKeyboardRemove())
+    await update.message.reply_text("⛔️ Ввод остановлен. Используйте /start для начала заново.", reply_markup=ReplyKeyboardRemove())
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    text = update.message.text
+    text = update.message.text.strip()
 
     if text == "🛑 Стоп":
         await stop(update, context)
@@ -43,44 +37,60 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_id not in user_state:
         if text in templates:
-            user_state[user_id] = {"template": text, "step": 0, "data": {}}
-            await update.message.reply_text(f"{templates[text][0]}:")
+            user_state[user_id] = {"template": text, "data": {}, "step": 0}
+            await update.message.reply_text(f"Введите: {templates[text][0]}", reply_markup=ReplyKeyboardRemove())
         else:
-            await update.message.reply_text("Пожалуйста, выберите шаблон из меню.")
+            await update.message.reply_text("Пожалуйста, выберите шаблон с помощью /start")
+        return
+
+    state = user_state[user_id]
+    template = state["template"]
+    field_name = templates[template][state["step"]]
+    state["data"][field_name] = text
+    state["step"] += 1
+
+    if state["step"] < len(templates[template]):
+        next_field = templates[template][state["step"]]
+        await update.message.reply_text(f"Введите: {next_field}")
     else:
-        state = user_state[user_id]
-        field = templates[state["template"]][state["step"]]
-        state["data"][field] = text
-        state["step"] += 1
+        filepath = generate_pdf(template, state["data"])
+        with open(filepath, "rb") as f:
+            await update.message.reply_document(document=InputFile(f), filename=os.path.basename(filepath))
+        del user_state[user_id]
 
-        if state["step"] < len(templates[state["template"]]):
-            next_field = templates[state["template"]][state["step"]]
-            await update.message.reply_text(f"{next_field}:")
-        else:
-            filepath = generate_pdf(state["template"], state["data"])
-            await update.message.reply_document(
-                document=InputFile(filepath, filename=os.path.basename(filepath))
-            )
-            del user_state[user_id]
+def main():
+    if not TOKEN or not WEBHOOK_URL:
+        raise ValueError("❌ Установите переменные окружения BOT_TOKEN и WEBHOOK_URL!")
 
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application = Application.builder().token(TOKEN).build()
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-import asyncio
-from fastapi import FastAPI
-from telegram.ext import Application
+    from fastapi import FastAPI
+    fastapi_app = FastAPI()
 
-fastapi_app = FastAPI()
+    @fastapi_app.get("/")
+    async def root():
+        return {"status": "OK"}
 
-@fastapi_app.on_event("startup")
-async def on_startup():
-    await app.bot.set_webhook(WEBHOOK_URL)
+    @fastapi_app.on_event("startup")
+    async def on_startup():
+        await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
 
-@fastapi_app.post(f"/{BOT_TOKEN}")
-async def telegram_webhook(update: dict):
-    await app.update_queue.put(Update.de_json(update, app.bot))
+    @fastapi_app.on_event("shutdown")
+    async def on_shutdown():
+        await application.updater.stop()
+        await application.stop()
+        await application.shutdown()
+
+    from telegram.ext import webhook
+    fastapi_app.add_route("/webhook", webhook.WebhookHandler(application))
+
+    import uvicorn
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=10000)
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("bot:fastapi_app", host="0.0.0.0", port=10000)
+    main()

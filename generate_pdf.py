@@ -1,27 +1,25 @@
-
 from fpdf import FPDF
-from datetime import datetime
 import os
+from datetime import datetime
 
-def generate_pdf(template_name, data):
+def generate_pdf(template, data):
     pdf = FPDF()
     pdf.add_page()
     pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
-    pdf.set_font("DejaVu", size=12)
+    pdf.set_font("DejaVu", "", 14)
 
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_auto_page_break(auto=True, margin=15)
-
-    pdf.cell(200, 10, txt=f"🌸 Док Куриленко — {template_name}", ln=True, align="C")
+    pdf.cell(200, 10, txt=f"🌸 {template}", ln=True, align='C')
     pdf.ln(10)
 
-    for key, value in data.items():
-        pdf.multi_cell(0, 10, txt=f"{key}: {value}")
+    for field, value in data.items():
+        pdf.multi_cell(0, 10, txt=f"{field}: {value}")
 
     pdf.ln(10)
-    pdf.multi_cell(0, 10, txt="📞 +37455987715 | Telegram: t.me/doc_kurilenko")
+    pdf.multi_cell(0, 10, txt="Куриленко Ю.С.")
+    pdf.multi_cell(0, 10, txt="📞 +37455987715
+Telegram: @ginekolog_yerevan")
 
-    filename = f"tmp/{data.get('ФИО', 'Протокол')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+    filename = f"tmp/{data.get('ФИО', 'протокол').replace(' ', '_')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
     os.makedirs("tmp", exist_ok=True)
     pdf.output(filename)
     return filename
