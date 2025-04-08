@@ -1,9 +1,9 @@
-
 import os
 import logging
 from fastapi import FastAPI, Request
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+
 from generate_pdf import generate_pdf
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -12,6 +12,7 @@ PORT = int(os.environ.get("PORT", 10000))
 
 app = FastAPI()
 application = Application.builder().token(BOT_TOKEN).build()
+
 user_state = {}
 
 TEMPLATES = {
@@ -59,9 +60,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-@app.get("/")
-async def root():
-    return {"message": "Bot is running"}
+@app.on_event("startup")
+async def on_startup():
+    await application.initialize()
+    await application.start()
+    await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+    print("Webhook установлен")
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    await application.stop()
+    await application.shutdown()
 
 @app.post("/webhook")
 async def telegram_webhook(req: Request):
@@ -69,18 +78,3 @@ async def telegram_webhook(req: Request):
     update = Update.de_json(data, application.bot)
     await application.process_update(update)
     return "ok"
-
-@app.on_event("startup")
-async def on_startup():
-    await application.bot.set_webhook(WEBHOOK_URL)
-    await application.initialize()
-    await application.start()
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    await application.stop()
-    await application.shutdown()
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("bot:app", host="0.0.0.0", port=PORT)

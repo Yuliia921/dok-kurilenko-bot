@@ -1,5 +1,4 @@
-
 python-telegram-bot==20.3
-fastapi==0.103.0
-uvicorn==0.23.2
 fpdf==1.7.2
+fastapi==0.109.2
+uvicorn==0.20.0
