@@ -59,11 +59,10 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_m
 
 @app.on_event("startup")
 async def on_startup():
-    await application.bot.set_webhook(WEBHOOK_URL.strip())
+    await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
     await application.initialize()
     await application.start()
     print("Webhook установлен")
-
 
 @app.on_event("shutdown")
 async def on_shutdown():
@@ -81,4 +80,6 @@ async def telegram_webhook(req: Request):
 async def root():
     return {"status": "ok"}
 
-
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("bot:app", host="0.0.0.0", port=PORT)

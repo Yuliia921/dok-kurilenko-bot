@@ -1,11 +1,11 @@
-import os
 from fpdf import FPDF
 from datetime import datetime
+import os
 
 def generate_pdf(template, data):
     pdf = FPDF()
     pdf.add_page()
-    pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVu", "", "fonts/DejaVuSans.ttf", uni=True)
     pdf.set_font("DejaVu", "", 14)
 
     pdf.cell(0, 10, txt=f"🌸 {template}", ln=True, align='C')
@@ -19,7 +19,7 @@ def generate_pdf(template, data):
     pdf.multi_cell(0, 10, txt="📢 Подписывайтесь на наш Telegram-канал")
     pdf.multi_cell(0, 10, txt="Telegram: @ginekolog_yerevan")
 
-    os.makedirs("tmp", exist_ok=True)
     filename = f"tmp/Документ_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
+    os.makedirs("tmp", exist_ok=True)
     pdf.output(filename)
     return filename
