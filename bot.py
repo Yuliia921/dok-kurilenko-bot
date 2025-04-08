@@ -59,7 +59,7 @@ application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_m
 
 @app.on_event("startup")
 async def on_startup():
-    await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
+   await application.bot.set_webhook(WEBHOOK_URL)
     await application.initialize()
     await application.start()
     print("Webhook установлен")
