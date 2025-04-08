@@ -17,7 +17,7 @@ def generate_pdf(template, data):
     pdf.ln(10)
     pdf.multi_cell(0, 10, txt="Куриленко Ю.С.")
     pdf.multi_cell(0, 10, txt="📞 +37455987715"
-Telegram: @ginekolog_yerevan")
+Telegram: "@ginekolog_yerevan")
 
     filename = f"tmp/{data.get('ФИО', 'протокол').replace(' ', '_')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
     os.makedirs("tmp", exist_ok=True)
