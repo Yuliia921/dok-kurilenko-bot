@@ -14,11 +14,12 @@ def generate_pdf(template, data):
     for field, value in data.items():
         pdf.multi_cell(0, 10, txt=f"{field}: {value}")
 
-    pdf.ln(10)
+        pdf.ln(10)
     pdf.multi_cell(0, 10, txt="📞 +37455987715")
-pdf.multi_cell(0, 10, txt="📢 Подписывайтесь на наш Telegram-канал")
+    pdf.multi_cell(0, 10, txt="📢 Подписывайтесь на наш Telegram-канал")
+    pdf.multi_cell(0, 10, txt="Telegram: @ginekolog_yerevan")
 
-Telegram: "@ginekolog_yerevan")
+
 
     filename = f"tmp/{data.get('ФИО', 'протокол').replace(' ', '_')}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
     os.makedirs("tmp", exist_ok=True)
