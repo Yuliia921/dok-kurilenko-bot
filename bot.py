@@ -1,85 +1,67 @@
 import os
-from fastapi import FastAPI, Request
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+import logging
+import telegram
+import fpdf
+print(">>> fpdf version:", fpdf.__version__)
+from io import BytesIO
+from telegram.error import Conflict
+from telegram import Update, ReplyKeyboardMarkup, InputFile
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from generate_pdf import generate_pdf
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-PORT = int(os.environ.get("PORT", 10000))
+TOKEN = "7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU"
 
-app = FastAPI()
-application = Application.builder().token(BOT_TOKEN).build()
-user_state = {}
-
-TEMPLATES = {
-    "Консультативное заключение": [
-        "ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"
-    ]
-}
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+user_data = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[key] for key in TEMPLATES.keys()]
-    await update.message.reply_text("Выберите шаблон:")
-    user_state[update.effective_user.id] = {"stage": "choose"}
+    keyboard = [["Консультативное заключение"]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    await update.message.reply_text(
+        "Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:",
+        reply_markup=reply_markup
+    )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
     text = update.message.text
+    chat_id = update.effective_chat.id
 
-    if user_id not in user_state:
-        await update.message.reply_text("Нажмите /start для начала")
-        return
+    if text == "Консультативное заключение":
+        user_data[chat_id] = {"шаблон": "заключение", "поля": {}, "шаг": 0}
+        await update.message.reply_text("Введите ФИО пациента:")
+    elif chat_id in user_data:
+        data = user_data[chat_id]
+        шаг = data["шаг"]
+        поля = ["ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"]
 
-    state = user_state[user_id]
-    if state["stage"] == "choose":
-        if text in TEMPLATES:
-            state["template"] = text
-            state["fields"] = TEMPLATES[text]
-            state["data"] = {}
-            state["field_index"] = 0
-            state["stage"] = "fill"
-            await update.message.reply_text(f"{state['fields'][0]}:")
+        if шаг < len(поля):
+            data["поля"][поля[шаг]] = text
+            data["шаг"] += 1
+            if data["шаг"] < len(поля):
+                await update.message.reply_text(f"Введите {поля[data['шаг']]}:")
+            else:
+                filepath = generate_pdf(data["поля"])
+                file_size = os.path.getsize(filepath)
+                logger.info(f"📄 PDF создан: {filepath}, размер: {file_size} байт")
+                await update.message.reply_document(
+                    document=BytesIO(open(filepath, 'rb').read()), filename=os.path.basename(filepath),
+                    caption="Консультативное заключение 🌸"
+                )
+                del user_data[chat_id]
         else:
-            await update.message.reply_text("Выберите шаблон из списка")
-    elif state["stage"] == "fill":
-        field = state["fields"][state["field_index"]]
-        state["data"][field] = text
-        state["field_index"] += 1
-        if state["field_index"] < len(state["fields"]):
-            next_field = state["fields"][state["field_index"]]
-            await update.message.reply_text(f"{next_field}:")
-        else:
-            filepath = generate_pdf(state["template"], state["data"])
-            await context.bot.send_document(chat_id=update.effective_chat.id, document=open(filepath, "rb"))
-            user_state.pop(user_id)
-
-application.add_handler(CommandHandler("start", start))
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-@app.on_event("startup")
-async def on_startup():
-    await application.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
-    await application.initialize()
-    await application.start()
-    print("Webhook установлен")
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    await application.stop()
-    await application.shutdown()
-
-@app.post("/webhook")
-async def telegram_webhook(req: Request):
-    data = await req.json()
-    update = Update.de_json(data, application.bot)
-    await application.process_update(update)
-    return "ok"
-
-@app.get("/")
-async def root():
-    return {"status": "ok"}
+            await update.message.reply_text("Шаблон завершён.")
+    else:
+        await update.message.reply_text("Пожалуйста, начните с команды /start")
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("bot:app", host="0.0.0.0", port=PORT)
+    try:
+        telegram.Bot(token=TOKEN).delete_webhook(drop_pending_updates=True)
+        app = ApplicationBuilder().token(TOKEN).build()
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        app.run_polling()
+    except Conflict as e:
+        logger.error("❌ Конфликт: бот уже работает где-то ещё. Завершение.")
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при запуске: {e}")
