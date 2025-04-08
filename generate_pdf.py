@@ -1,3 +1,4 @@
+
 import os
 from fpdf import FPDF
 from datetime import datetime
@@ -19,7 +20,7 @@ def generate_pdf(template, data):
     pdf.multi_cell(0, 10, txt="📢 Подписывайтесь на наш Telegram-канал")
     pdf.multi_cell(0, 10, txt="Telegram: @ginekolog_yerevan")
 
-    filename = f"tmp/Документ_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
     os.makedirs("tmp", exist_ok=True)
+    filename = f"tmp/Документ_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pdf"
     pdf.output(filename)
     return filename
