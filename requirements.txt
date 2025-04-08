@@ -1,2 +1,4 @@
 python-telegram-bot==20.3
-fpdf==1.7.2
+fpdf==2.7.8
+httpx
+fonttools
