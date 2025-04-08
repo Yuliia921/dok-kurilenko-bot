@@ -9,17 +9,24 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 app = FastAPI()
 application = Application.builder().token(BOT_TOKEN).build()
+
 user_state = {}
 
 TEMPLATES = {
     "Консультативное заключение": [
         "ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"
+    ],
+    "УЗИ малого таза": [
+        "ФИО", "Дата последней менструации", "Положение матки", "Форма матки",
+        "Размеры матки", "Структура миометрия", "М-эхо", "Шейка матки",
+        "Яичники", "Дополнительные образования", "Свободная жидкость",
+        "Заключение", "Рекомендации"
     ]
 }
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[key] for key in TEMPLATES.keys()]
-    await update.message.reply_text("Выберите шаблон:")
+    keyboard = [[template] for template in TEMPLATES.keys()]
+    await update.message.reply_text("Выберите шаблон:", reply_markup={"keyboard": keyboard, "one_time_keyboard": True})
     user_state[update.effective_user.id] = {"stage": "choose"}
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -40,7 +47,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             state["stage"] = "fill"
             await update.message.reply_text(f"{state['fields'][0]}:")
         else:
-            await update.message.reply_text("Выберите шаблон из списка")
+            await update.message.reply_text("Пожалуйста, выберите шаблон из списка.")
     elif state["stage"] == "fill":
         field = state["fields"][state["field_index"]]
         state["data"][field] = text
@@ -56,20 +63,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 application.add_handler(CommandHandler("start", start))
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-@app.on_event("startup")
-async def on_startup():
-    await application.initialize()
-    await application.bot.set_webhook(WEBHOOK_URL)
-    await application.start()
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    await application.stop()
-    await application.shutdown()
-
-@app.post("/")
+@app.post("/webhook")
 async def telegram_webhook(req: Request):
     data = await req.json()
     update = Update.de_json(data, application.bot)
     await application.process_update(update)
     return "ok"
+
+@app.on_event("startup")
+async def startup():
+    await application.initialize()
+    await application.start()
+    await application.bot.set_webhook(WEBHOOK_URL)
+
+@app.on_event("shutdown")
+async def shutdown():
+    await application.stop()
+    await application.shutdown()
