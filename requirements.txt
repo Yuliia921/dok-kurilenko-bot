@@ -1,4 +1,4 @@
 python-telegram-bot==20.3
+fpdf==1.7.2
 fastapi
 uvicorn
-fpdf==1.7.2
