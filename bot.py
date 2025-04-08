@@ -81,6 +81,4 @@ async def telegram_webhook(req: Request):
 async def root():
     return {"status": "ok"}
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("bot:app", host="0.0.0.0", port=PORT)
+
