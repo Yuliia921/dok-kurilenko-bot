@@ -9,15 +9,16 @@ def generate_pdf(fields: dict, template_name: str) -> str:
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
+    # Заголовок — только шаблон
     pdf.set_font("DejaVuB", "", 14)
-    pdf.cell(0, 10, "🌸 Док Куриленко", ln=True, align="C")
-    pdf.set_font("DejaVu", "", 12)
-    pdf.multi_cell(180, 10, template_name, align="C")
+    pdf.cell(0, 10, template_name, ln=True, align="C")
     pdf.ln(5)
 
+    # Поля
+    pdf.set_font("DejaVu", "", 12)
     for key, value in fields.items():
-        text = f"{key}: {value}"
-        pdf.multi_cell(180, 10, text, align="L")
+        if value.strip():
+            pdf.multi_cell(180, 10, f"{key}: {value}", align="L")
 
     pdf.ln(5)
     pdf.cell(0, 10, "Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
