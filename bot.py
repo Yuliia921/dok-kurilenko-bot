@@ -1,104 +1,67 @@
-
-from fastapi import FastAPI, Request
 import os
+import logging
 import telegram
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters, CallbackQueryHandler
-from fpdf import FPDF
+import fpdf
+print(">>> fpdf version:", fpdf.__version__)
+from io import BytesIO
+from telegram.error import Conflict
+from telegram import Update, ReplyKeyboardMarkup, InputFile
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from generate_pdf import generate_pdf
 
-TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+TOKEN = "7495233579:AAGKqPpZY0vd3ZK9a1ljAbZjEehCCMhFIdU"
 
-bot = telegram.Bot(token=TOKEN)
-app = FastAPI()
-dispatcher = Dispatcher(bot, None, workers=0)
-
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 user_data = {}
 
-def start(update, context):
-    keyboard = [
-        [InlineKeyboardButton("🧾 Консультативное заключение", callback_data='consult')],
-        [InlineKeyboardButton("📷 УЗИ для беременных", callback_data='us_pregnancy')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text("Выберите шаблон:", reply_markup=reply_markup)
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [["Консультативное заключение"]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    await update.message.reply_text(
+        "Добро пожаловать в Док Куриленко 🌸\nВыберите шаблон:",
+        reply_markup=reply_markup
+    )
 
-def stop(update, context):
-    user_data.pop(update.effective_chat.id, None)
-    update.message.reply_text("Ввод остановлен.")
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    chat_id = update.effective_chat.id
 
-def button(update, context):
-    query = update.callback_query
-    query.answer()
-    chat_id = query.message.chat_id
-    user_data[chat_id] = {}
+    if text == "Консультативное заключение":
+        user_data[chat_id] = {"шаблон": "заключение", "поля": {}, "шаг": 0}
+        await update.message.reply_text("Введите ФИО пациента:")
+    elif chat_id in user_data:
+        data = user_data[chat_id]
+        шаг = data["шаг"]
+        поля = ["ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"]
 
-    if query.data == "consult":
-        user_data[chat_id]["template"] = "consult"
-        user_data[chat_id]["fields"] = [
-            "Дата", "ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"
-        ]
-    elif query.data == "us_pregnancy":
-        user_data[chat_id]["template"] = "us_pregnancy"
-        user_data[chat_id]["fields"] = [
-            "ФИО", "Последняя менструация", "Положение матки", "Размер плодного яйца",
-            "Размер эмбриона", "Желточный мешок", "Сердцебиение и ЧСС", "Расположение хориона",
-            "Желтое тело", "Дополнительные данные", "Заключение", "Рекомендации"
-        ]
-
-    user_data[chat_id]["answers"] = []
-    bot.send_message(chat_id=chat_id, text=f"Введите: {user_data[chat_id]['fields'][0]}")
-
-def handle_message(update, context):
-    chat_id = update.message.chat_id
-    if chat_id not in user_data:
-        update.message.reply_text("Напишите /start, чтобы начать.")
-        return
-
-    data = user_data[chat_id]
-    data["answers"].append(update.message.text)
-
-    if len(data["answers"]) < len(data["fields"]):
-        next_field = data["fields"][len(data["answers"])]
-        bot.send_message(chat_id=chat_id, text=f"Введите: {next_field}")
+        if шаг < len(поля):
+            data["поля"][поля[шаг]] = text
+            data["шаг"] += 1
+            if data["шаг"] < len(поля):
+                await update.message.reply_text(f"Введите {поля[data['шаг']]}:")
+            else:
+                filepath = generate_pdf(data["поля"])
+                file_size = os.path.getsize(filepath)
+                logger.info(f"📄 PDF создан: {filepath}, размер: {file_size} байт")
+                await update.message.reply_document(
+                    document=BytesIO(open(filepath, 'rb').read()), filename=os.path.basename(filepath),
+                    caption="Консультативное заключение 🌸"
+                )
+                del user_data[chat_id]
+        else:
+            await update.message.reply_text("Шаблон завершён.")
     else:
-        filename = f"/mnt/data/consultation_{chat_id}.pdf"
-        generate_pdf(data["template"], data["fields"], data["answers"], filename)
-        with open(filename, "rb") as f:
-            bot.send_document(chat_id=chat_id, document=f)
-        bot.send_message(chat_id=chat_id, text="Готово ✅")
-        user_data.pop(chat_id)
+        await update.message.reply_text("Пожалуйста, начните с команды /start")
 
-def generate_pdf(template, fields, answers, filename):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.add_font('DejaVu', '', 'fonts/DejaVuSans.ttf', uni=True)
-    pdf.set_font("DejaVu", size=12)
-
-    pdf.cell(200, 10, txt="🌸 Док Куриленко", ln=True, align="C")
-    pdf.set_font("DejaVu", style='U', size=12)
-    pdf.cell(200, 10, txt="Консультативное заключение" if template == "consult" else "УЗИ для беременных", ln=True, align="C")
-    pdf.set_font("DejaVu", size=12)
-    pdf.ln(10)
-
-    for field, answer in zip(fields, answers):
-        pdf.multi_cell(0, 10, f"{field}: {answer}", align="L")
-
-    pdf.ln(5)
-    pdf.cell(0, 10, txt="Телефон: +37455987715", ln=True)
-    pdf.cell(0, 10, txt="Telegram: t.me/dok_kurilenko", ln=True)
-    pdf.ln(10)
-    pdf.cell(0, 10, txt="Куриленко Ю.С.", ln=True, align="R")
-
-    pdf.output(filename)
-
-@app.post("/webhook")
-async def process_webhook(request: Request):
-    update = telegram.Update.de_json(await request.json(), bot)
-    dispatcher.process_update(update)
-    return "ok"
-
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(CommandHandler("stop", stop))
-dispatcher.add_handler(CallbackQueryHandler(button))
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+if __name__ == "__main__":
+    try:
+        telegram.Bot(token=TOKEN).delete_webhook(drop_pending_updates=True)
+        app = ApplicationBuilder().token(TOKEN).build()
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        app.run_polling()
+    except Conflict as e:
+        logger.error("❌ Конфликт: бот уже работает где-то ещё. Завершение.")
+    except Exception as e:
+        logger.exception(f"❌ Ошибка при запуске: {e}")
