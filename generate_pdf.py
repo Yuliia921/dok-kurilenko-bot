@@ -9,45 +9,54 @@ def generate_pdf(fields: dict, template_name: str) -> str:
     pdf.add_font("DejaVuB", "", "DejaVuSans-Bold.ttf", uni=True)
     pdf.add_page()
 
-    page_width = pdf.w - 2 * pdf.l_margin
+    key_width = 60
+    val_width = pdf.w - pdf.l_margin - pdf.r_margin - key_width
 
     pdf.set_font("DejaVuB", "", 14)
-    pdf.multi_cell(page_width, 10, template_name, align="C")
-    pdf.ln(3)
+    pdf.cell(0, 10, template_name, ln=True, align="C")
+    pdf.ln(5)
 
-    def write_section(title, content_dict, keys):
-        lines = []
-        for key in keys:
-            value = content_dict.get(key, "").strip()
-            if value:
-                lines.append(f"{key}: {value}")
-        if lines:
+    def write_block(title, pairs):
+        if pairs:
             pdf.set_font("DejaVuB", "", 12)
-            pdf.multi_cell(page_width, 8, title, align="L")
+            pdf.cell(0, 10, title, ln=True)
             pdf.set_font("DejaVu", "", 12)
-            for line in lines:
-                pdf.multi_cell(page_width, 8, line, align="L")
+            for key, value in pairs:
+                value = value.strip()
+                if value:
+                    y_before = pdf.get_y()
+                    pdf.set_xy(pdf.l_margin, y_before)
+                    pdf.cell(key_width, 10, f"{key}:", ln=False)
+                    pdf.multi_cell(val_width, 10, value)
             pdf.ln(2)
 
-    def write_block(title, key):
-        value = fields.get(key, "").strip()
-        if value:
-            pdf.set_font("DejaVuB", "", 12)
-            pdf.multi_cell(page_width, 8, f"{title}:", align="L")
-            pdf.set_font("DejaVu", "", 12)
-            pdf.multi_cell(page_width, 8, value, align="L")
-            pdf.ln(2)
-
-    # Секции
-    write_section("👩 Пациент", fields, ["ФИО", "Последняя менструация"])
-    write_section("🧠 Матка и структуры", fields, [
-        "Положение матки", "Размер плодного яйца", "Размер эмбриона",
-        "Желточный мешок", "Расположение хориона", "Желтое тело"
+    write_block("👩 Пациент", [
+        ("ФИО", fields.get("ФИО", "")),
+        ("Последняя менструация", fields.get("Последняя менструация", ""))
     ])
-    write_section("👶 Плод", fields, ["Сердцебиение и ЧСС"])
-    write_block("📎 Дополнительные данные", "Дополнительные данные")
-    write_block("📌 Заключение", "Заключение")
-    write_block("📋 Рекомендации", "Рекомендации")
+
+    write_block("🧠 Матка и структуры", [
+        ("Положение матки", fields.get("Положение матки", "")),
+        ("Размер плодного яйца", fields.get("Размер плодного яйца", "")),
+        ("Размер эмбриона", fields.get("Размер эмбриона", "")),
+        ("Желточный мешок", fields.get("Желточный мешок", "")),
+        ("Расположение хориона", fields.get("Расположение хориона", "")),
+        ("Желтое тело", fields.get("Желтое тело", ""))
+    ])
+
+    write_block("👶 Плод", [
+        ("Сердцебиение и ЧСС", fields.get("Сердцебиение и ЧСС", ""))
+    ])
+
+    write_block("📎 Дополнительные данные", [
+        ("", fields.get("Дополнительные данные", ""))
+    ])
+    write_block("📌 Заключение", [
+        ("", fields.get("Заключение", ""))
+    ])
+    write_block("📋 Рекомендации", [
+        ("", fields.get("Рекомендации", ""))
+    ])
 
     pdf.ln(4)
     pdf.cell(0, 10, "Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
