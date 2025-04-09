@@ -13,16 +13,30 @@ def generate_pdf(fields: dict, template_name: str) -> str:
 
     pdf.set_font("DejaVuB", "", 14)
     pdf.multi_cell(page_width, 10, template_name, align="C")
-    pdf.ln(5)
+    pdf.ln(3)
 
     def write_section(title, content_dict, keys):
-        pdf.set_font("DejaVuB", "", 12)
-        pdf.multi_cell(page_width, 10, title, align="L")
-        pdf.set_font("DejaVu", "", 12)
+        lines = []
         for key in keys:
-            value = content_dict.get(key, "")
-            pdf.multi_cell(page_width, 10, f"{key}: {value}", align="L")
-        pdf.ln(3)
+            value = content_dict.get(key, "").strip()
+            if value:
+                lines.append(f"{key}: {value}")
+        if lines:
+            pdf.set_font("DejaVuB", "", 12)
+            pdf.multi_cell(page_width, 8, title, align="L")
+            pdf.set_font("DejaVu", "", 12)
+            for line in lines:
+                pdf.multi_cell(page_width, 8, line, align="L")
+            pdf.ln(2)
+
+    def write_block(title, key):
+        value = fields.get(key, "").strip()
+        if value:
+            pdf.set_font("DejaVuB", "", 12)
+            pdf.multi_cell(page_width, 8, f"{title}:", align="L")
+            pdf.set_font("DejaVu", "", 12)
+            pdf.multi_cell(page_width, 8, value, align="L")
+            pdf.ln(2)
 
     # Секции
     write_section("👩 Пациент", fields, ["ФИО", "Последняя менструация"])
@@ -31,11 +45,11 @@ def generate_pdf(fields: dict, template_name: str) -> str:
         "Желточный мешок", "Расположение хориона", "Желтое тело"
     ])
     write_section("👶 Плод", fields, ["Сердцебиение и ЧСС"])
-    write_section("📎 Дополнительные данные", fields, ["Дополнительные данные"])
-    write_section("📌 Заключение", fields, ["Заключение"])
-    write_section("📋 Рекомендации", fields, ["Рекомендации"])
+    write_block("📎 Дополнительные данные", "Дополнительные данные")
+    write_block("📌 Заключение", "Заключение")
+    write_block("📋 Рекомендации", "Рекомендации")
 
-    pdf.ln(5)
+    pdf.ln(4)
     pdf.cell(0, 10, "Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
     pdf.cell(0, 10, "+37455987715", ln=True)
     pdf.cell(0, 10, "Telegram: https://t.me/doc_Kurilenko", ln=True)
