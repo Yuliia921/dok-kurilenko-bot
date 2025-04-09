@@ -12,17 +12,12 @@ def generate_pdf(fields: dict, template_name: str) -> str:
     pdf.set_font("DejaVuB", "", 14)
     pdf.cell(0, 10, "🌸 Док Куриленко", ln=True, align="C")
     pdf.set_font("DejaVu", "", 12)
-    pdf.multi_cell(0, 10, template_name, align="C")
+    pdf.multi_cell(180, 10, template_name, align="C")
     pdf.ln(5)
 
     for key, value in fields.items():
         text = f"{key}: {value}"
-        try:
-            pdf.multi_cell(0, 10, text, align="L", max_line_height=pdf.font_size)
-        except:
-            # fallback: вручную разбиваем слишком длинные строки
-            wrapped = text[:90] + "..." if len(text) > 90 else text
-            pdf.multi_cell(0, 10, wrapped, align="L")
+        pdf.multi_cell(180, 10, text, align="L")
 
     pdf.ln(5)
     pdf.cell(0, 10, "Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
