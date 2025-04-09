@@ -2,40 +2,31 @@ from fpdf import FPDF
 import os
 from datetime import datetime
 
-def generate_pdf(fields: dict) -> str:
-    fio = fields.get("ФИО", "consultation").replace(" ", "_")
-    date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"{fio}_{date}.pdf"
-
-    os.makedirs("tmp", exist_ok=True)
-    path = os.path.join("tmp", filename)
-
+def generate_pdf(fields: dict, template_name: str) -> str:
     pdf = FPDF()
-    pdf.add_page()
     pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
-    pdf.add_font("DejaVu", "B", "DejaVuSans-Bold.ttf", uni=True)
-    pdf.set_font("DejaVu", size=16)
-    pdf.cell(0, 10, txt="Консультативное заключение", ln=True, align="C")
-    pdf.set_line_width(0.5)
-    pdf.line(10, 20, 200, 20)
+    pdf.add_font("DejaVuB", "", "DejaVuSans-Bold.ttf", uni=True)
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    pdf.set_font("DejaVuB", "", 14)
+    pdf.cell(0, 10, "🌸 Док Куриленко", ln=True, align="C")
+    pdf.set_font("DejaVu", "", 12)
+    pdf.cell(0, 10, template_name, ln=True, align="C")
     pdf.ln(10)
 
-    pdf.set_font("DejaVu", size=12)
-    labels = ["ФИО", "Возраст", "Диагноз", "Обследование", "Рекомендации"]
-    for label in labels:
-        value = fields.get(label, "")
-        pdf.set_font("DejaVu", style="B", size=12)
-        pdf.cell(40, 10, txt=f"{label}:", ln=0)
-        pdf.set_font("DejaVu", size=12)
-        pdf.multi_cell(0, 10, txt=value)
-        pdf.ln(2)
+    for key, value in fields.items():
+        pdf.multi_cell(0, 10, f"{key}: {value}", align="L")
 
-    pdf.ln(10)
-    pdf.set_font("DejaVu", size=12)
-    pdf.cell(0, 10, txt="Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
-    pdf.set_font("DejaVu", size=10)
-    pdf.cell(0, 8, txt="📞 +37455987715", ln=True)
-    pdf.cell(0, 8, txt="Telegram: https://t.me/doc_Kurilenko", ln=True)
+    pdf.ln(5)
+    pdf.cell(0, 10, "Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
+    pdf.cell(0, 10, "+37455987715", ln=True)
+    pdf.cell(0, 10, "Telegram: https://t.me/doc_Kurilenko", ln=True)
 
-    pdf.output(path)
-    return path
+    now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"Куриленко_Юлия_{now}.pdf"
+    filepath = os.path.join("tmp", filename)
+    os.makedirs("tmp", exist_ok=True)
+    pdf.output(filepath)
+
+    return filepath

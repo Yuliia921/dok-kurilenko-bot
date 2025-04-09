@@ -53,7 +53,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if data["шаг"] < len(поля):
                 await update.message.reply_text(f"Введите {поля[data['шаг']]}:")
             else:
-                filepath = generate_pdf(data["поля"])
+                filepath = generate_pdf(data["поля"], data["шаблон"])
                 file_size = os.path.getsize(filepath)
                 logger.info(f"📄 PDF создан: {filepath}, размер: {file_size} байт")
                 await update.message.reply_document(
