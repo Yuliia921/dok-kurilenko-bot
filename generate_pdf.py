@@ -4,48 +4,36 @@ from datetime import datetime
 
 def generate_pdf(fields: dict, template_name: str) -> str:
     pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
     pdf.add_font("DejaVuB", "", "DejaVuSans-Bold.ttf", uni=True)
-    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
+    page_width = pdf.w - 2 * pdf.l_margin
+
     pdf.set_font("DejaVuB", "", 14)
-    pdf.cell(0, 10, template_name, ln=True, align="C")
+    pdf.multi_cell(page_width, 10, template_name, align="C")
     pdf.ln(5)
 
-    pdf.set_font("DejaVuB", "", 12)
-    pdf.cell(0, 10, "🧠 Матка и структуры", ln=True)
-    pdf.set_font("DejaVu", "", 12)
-    pdf.multi_cell(180, 10, f"Положение матки: {fields.get('Положение матки', '')}", align="L")
-    pdf.multi_cell(180, 10, f"Размер плодного яйца: {fields.get('Размер плодного яйца', '')}", align="L")
-    pdf.multi_cell(180, 10, f"Размер эмбриона: {fields.get('Размер эмбриона', '')}", align="L")
-    pdf.multi_cell(180, 10, f"Желточный мешок: {fields.get('Желточный мешок', '')}", align="L")
-    pdf.multi_cell(180, 10, f"Расположение хориона: {fields.get('Расположение хориона', '')}", align="L")
-    pdf.multi_cell(180, 10, f"Желтое тело: {fields.get('Желтое тело', '')}", align="L")
+    def write_section(title, content_dict, keys):
+        pdf.set_font("DejaVuB", "", 12)
+        pdf.multi_cell(page_width, 10, title, align="L")
+        pdf.set_font("DejaVu", "", 12)
+        for key in keys:
+            value = content_dict.get(key, "")
+            pdf.multi_cell(page_width, 10, f"{key}: {value}", align="L")
+        pdf.ln(3)
 
-    pdf.ln(3)
-    pdf.set_font("DejaVuB", "", 12)
-    pdf.cell(0, 10, "👶 Плод", ln=True)
-    pdf.set_font("DejaVu", "", 12)
-    pdf.multi_cell(180, 10, f"Сердцебиение и ЧСС: {fields.get('Сердцебиение и ЧСС', '')}", align="L")
-
-    pdf.ln(3)
-    pdf.set_font("DejaVuB", "", 12)
-    pdf.cell(0, 10, "📎 Дополнительные данные", ln=True)
-    pdf.set_font("DejaVu", "", 12)
-    pdf.multi_cell(180, 10, f"{fields.get('Дополнительные данные', '')}", align="L")
-
-    pdf.ln(3)
-    pdf.set_font("DejaVuB", "", 12)
-    pdf.cell(0, 10, "📌 Заключение", ln=True)
-    pdf.set_font("DejaVu", "", 12)
-    pdf.multi_cell(180, 10, f"{fields.get('Заключение', '')}", align="L")
-
-    pdf.ln(3)
-    pdf.set_font("DejaVuB", "", 12)
-    pdf.cell(0, 10, "📋 Рекомендации", ln=True)
-    pdf.set_font("DejaVu", "", 12)
-    pdf.multi_cell(180, 10, f"{fields.get('Рекомендации', '')}", align="L")
+    # Секции
+    write_section("👩 Пациент", fields, ["ФИО", "Последняя менструация"])
+    write_section("🧠 Матка и структуры", fields, [
+        "Положение матки", "Размер плодного яйца", "Размер эмбриона",
+        "Желточный мешок", "Расположение хориона", "Желтое тело"
+    ])
+    write_section("👶 Плод", fields, ["Сердцебиение и ЧСС"])
+    write_section("📎 Дополнительные данные", fields, ["Дополнительные данные"])
+    write_section("📌 Заключение", fields, ["Заключение"])
+    write_section("📋 Рекомендации", fields, ["Рекомендации"])
 
     pdf.ln(5)
     pdf.cell(0, 10, "Врач акушер-гинеколог Куриленко Юлия Сергеевна", ln=True)
